@@ -1,0 +1,4 @@
+CREATE ROLE voie_rapide WITH SUPERUSER LOGIN CREATEDB PASSWORD 'wow*veryrapide';
+CREATE DATABASE voie_rapide_production WITH OWNER voie_rapide;
+CREATE DATABASE voie_rapide_development WITH OWNER voie_rapide;
+CREATE DATABASE voie_rapide_test WITH OWNER voie_rapide;
