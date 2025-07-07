@@ -20,6 +20,10 @@ class Document < ApplicationRecord
   scope :par_categorie, ->(category) { where(categorie: category) }
   scope :par_type_marche, ->(type) { where(type_marche: [nil, type]) }
 
+  # Combined scopes for market configuration
+  scope :mandatory_for_market_type, ->(type) { mandatory.for_market_type(type).active }
+  scope :optional_for_market_type, ->(type) { optional.for_market_type(type).active }
+
   def mandatory?
     obligatoire
   end
