@@ -5,10 +5,10 @@
 ### 1. Infrastructure et Architecture
 
 #### 1.1 Base de données
-- [ ] Concevoir le schéma de base de données complet
-- [ ] Définir les tables principales (marchés, candidatures, documents, éditeurs)
+- [x] Concevoir le schéma de base de données complet
+- [x] Définir les tables principales (marchés, candidatures, documents, éditeurs)
 - [ ] Planifier la stratégie de partitionnement pour les gros volumes
-- [ ] Mettre en place les index nécessaires
+- [x] Mettre en place les index nécessaires
 - [ ] Configurer les backups automatiques
 
 #### 1.2 Sécurité
@@ -22,7 +22,7 @@
 - [ ] Préparer l'architecture pour un futur antivirus (point d'injection)
 
 #### 1.3 Stockage des fichiers
-- [ ] Implémenter le stockage local Rails (Active Storage)
+- [x] Implémenter le stockage local Rails (Active Storage)
 - [ ] Créer le système de génération de ZIP
 - [ ] Mettre en place la gestion des URLs temporaires sécurisées
 
@@ -61,7 +61,7 @@
 ### 4. Internationalisation (i18n)
 
 #### 4.1 Architecture i18n
-- [ ] Configurer Rails i18n
+- [x] Configurer Rails i18n
 - [ ] Structurer les fichiers de traduction
 - [ ] Définir la stratégie de gestion des locales
 - [ ] Préparer le système de détection de langue
@@ -83,15 +83,17 @@
 ### 6. Tests et Qualité
 
 #### 6.1 Stratégie de tests
-- [ ] Mettre en place les tests unitaires (RSpec)
+- [x] Mettre en place les tests unitaires (RSpec)
+- [x] Configurer FactoryBot pour les données de test
+- [x] Créer les specs pour tous les modèles essentiels
 - [ ] Configurer les tests d'intégration
 - [ ] Implémenter les tests de bout en bout
 - [ ] Configurer la couverture de code minimale
 
 #### 6.2 Qualité de code
-- [ ] Mettre en place les hooks pre-commit
+- [x] Mettre en place les hooks pre-commit (RuboCop)
 - [ ] Configurer les revues de code obligatoires
-- [ ] Implémenter l'analyse de sécurité du code
+- [x] Analyse de sécurité du code (GitGuardian en mode async)
 
 ### 7. Configuration et paramétrage
 
@@ -152,17 +154,17 @@
 ### 3. Création et stockage du marché
 
 #### 3.1 Modèle de données
-- [ ] Créer le modèle Marché avec tous les attributs
-- [ ] Implémenter les associations avec les éditeurs
-- [ ] Créer la relation avec les documents requis
-- [ ] Gérer l'ID unique et les références externes
-- [ ] Implémenter les validations métier
+- [x] Créer le modèle Marché avec tous les attributs
+- [x] Implémenter les associations avec les éditeurs
+- [x] Créer la relation avec les documents requis
+- [x] Gérer l'ID unique et les références externes
+- [x] Implémenter les validations métier
 
 #### 3.2 Persistance
 - [ ] Créer le service de création de marché
 - [ ] Implémenter la transaction de sauvegarde
-- [ ] Gérer la génération d'identifiants uniques
-- [ ] Créer les indexes pour les recherches
+- [x] Gérer la génération d'identifiants uniques
+- [x] Créer les indexes pour les recherches
 - [ ] Implémenter l'archivage des configurations
 
 ### 4. Réception des candidatures
@@ -282,10 +284,10 @@
 - [ ] Créer les messages d'erreur d'upload
 
 #### 3.3 Gestion des données
-- [ ] Créer le modèle Candidature
-- [ ] Implémenter le stockage temporaire des fichiers
-- [ ] Gérer la validation côté serveur
-- [ ] Créer les associations avec le marché
+- [x] Créer le modèle Candidature
+- [x] Implémenter le stockage temporaire des fichiers (Active Storage)
+- [x] Gérer la validation côté serveur
+- [x] Créer les associations avec le marché
 - [ ] Implémenter le nettoyage des données orphelines
 
 #### 3.4 MVP sans API
