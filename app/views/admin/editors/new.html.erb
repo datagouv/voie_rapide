@@ -1,0 +1,236 @@
+<% content_for :title, "Nouvel Éditeur - Administration Fast Track" %>
+
+<div class="admin-header">
+  <h1>Créer un Nouvel Éditeur</h1>
+  <%= link_to "← Retour", admin_editors_path, class: "btn btn-outline-secondary" %>
+</div>
+
+<div class="form-container">
+  <%= form_with model: [:admin, @editor], local: true, class: "editor-form" do |form| %>
+    <% if @editor.errors.any? %>
+      <div class="alert alert-danger">
+        <h4><%= pluralize(@editor.errors.count, "erreur") %> empêche(nt) la sauvegarde :</h4>
+        <ul>
+          <% @editor.errors.full_messages.each do |message| %>
+            <li><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <div class="form-group">
+      <%= form.label :name, "Nom de l'éditeur *", class: "form-label" %>
+      <%= form.text_field :name, class: "form-control", required: true, 
+          placeholder: "Ex: MarchésPublics.fr" %>
+      <small class="form-text">Nom de la plateforme ou de l'éditeur</small>
+    </div>
+
+    <div class="form-group">
+      <%= form.label :callback_url, "Callback URL *", class: "form-label" %>
+      <%= form.url_field :callback_url, class: "form-control", required: true,
+          placeholder: "https://www.marchespublics.fr/auth/fasttrack/callback" %>
+      <small class="form-text">URL de redirection après authentification OAuth</small>
+    </div>
+
+    <div class="form-group">
+      <div class="checkbox-group">
+        <%= form.check_box :authorized, class: "form-checkbox", checked: true %>
+        <%= form.label :authorized, "Éditeur autorisé", class: "checkbox-label" %>
+      </div>
+      <small class="form-text">L'éditeur est autorisé à utiliser Fast Track</small>
+    </div>
+
+    <div class="form-group">
+      <div class="checkbox-group">
+        <%= form.check_box :active, class: "form-checkbox", checked: true %>
+        <%= form.label :active, "Éditeur actif", class: "checkbox-label" %>
+      </div>
+      <small class="form-text">L'éditeur peut actuellement utiliser les services</small>
+    </div>
+
+    <div class="form-info">
+      <h4>Information importante</h4>
+      <p>
+        Une fois l'éditeur créé, les identifiants OAuth2 seront automatiquement générés :
+      </p>
+      <ul>
+        <li><strong>Client ID</strong> : Identifiant unique (généré automatiquement)</li>
+        <li><strong>Client Secret</strong> : Clé secrète (générée automatiquement)</li>
+        <li><strong>Scopes autorisés</strong> : market_config, market_read, application_read</li>
+      </ul>
+      <p>
+        Ces informations seront nécessaires pour configurer l'éditeur avec Fast Track.
+      </p>
+    </div>
+
+    <div class="form-actions">
+      <%= form.submit "Créer l'Éditeur", class: "btn btn-primary" %>
+      <%= link_to "Annuler", admin_editors_path, class: "btn btn-outline-secondary" %>
+    </div>
+  <% end %>
+</div>
+
+<style>
+  .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .admin-header h1 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    margin: 0;
+    color: #111827;
+  }
+
+  .form-container {
+    max-width: 600px;
+    background: white;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+    padding: 2rem;
+  }
+
+  .editor-form {
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  .form-group {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .form-label {
+    font-weight: 600;
+    color: #374151;
+    margin: 0;
+  }
+
+  .form-control {
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+  }
+
+  .form-control:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+
+  .form-text {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin: 0;
+  }
+
+  .form-info {
+    background-color: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+  }
+
+  .form-info h4 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #0369a1;
+    margin: 0 0 1rem 0;
+  }
+
+  .form-info p {
+    margin: 0 0 1rem 0;
+    color: #0369a1;
+  }
+
+  .form-info ul {
+    margin: 0 0 1rem 0;
+    padding-left: 1.5rem;
+    color: #0369a1;
+  }
+
+  .form-info li {
+    margin-bottom: 0.5rem;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .alert {
+    padding: 1rem;
+    border-radius: 0.375rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .alert-danger {
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+  }
+
+  .alert h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .alert ul {
+    margin: 0;
+    padding-left: 1.5rem;
+  }
+
+  .btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    font-weight: 500;
+    text-align: center;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-size: 1rem;
+  }
+
+  .btn-primary {
+    background-color: #2563eb;
+    color: white;
+  }
+
+  .btn-outline-secondary {
+    border-color: #6b7280;
+    color: #6b7280;
+    background: white;
+  }
+
+  .btn:hover {
+    opacity: 0.9;
+  }
+
+  .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .form-checkbox {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .checkbox-label {
+    font-weight: 500;
+    color: #374151;
+    margin: 0;
+  }
+</style>

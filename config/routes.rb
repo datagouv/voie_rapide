@@ -3,6 +3,15 @@
 Rails.application.routes.draw do
   use_doorkeeper
 
+  # Admin routes - Editor management for development
+  namespace :admin do
+    resources :editors do
+      member do
+        patch :sync_doorkeeper
+      end
+    end
+  end
+
   # Buyer (Editor) routes - OAuth protected market configuration
   namespace :buyer do
     resources :market_configurations, only: %i[new create] do
@@ -26,6 +35,6 @@ Rails.application.routes.draw do
   # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
-  # Defines the root path route ("/")
-  # root "posts#index"
+  # Root path for development
+  root 'home#index'
 end

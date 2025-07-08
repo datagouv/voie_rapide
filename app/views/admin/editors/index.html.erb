@@ -1,0 +1,217 @@
+<% content_for :title, "Gestion des Éditeurs - Administration Fast Track" %>
+
+<div class="admin-header">
+  <h1>Gestion des Éditeurs</h1>
+  <%= link_to "Nouvel Éditeur", new_admin_editor_path, class: "btn btn-primary" %>
+</div>
+
+<div class="editors-list">
+  <% if @editors.any? %>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Callback URL</th>
+            <th>Statut</th>
+            <th>OAuth App</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @editors.each do |editor| %>
+            <tr>
+              <td>
+                <strong><%= editor.name %></strong>
+              </td>
+              <td>
+                <%= link_to editor.callback_url, editor.callback_url, target: "_blank", class: "external-link" %>
+              </td>
+              <td>
+                <% if editor.authorized_and_active? %>
+                  <span class="badge badge-success">✅ Actif</span>
+                <% elsif editor.authorized? %>
+                  <span class="badge badge-warning">⚠️ Autorisé</span>
+                <% else %>
+                  <span class="badge badge-danger">❌ Inactif</span>
+                <% end %>
+              </td>
+              <td>
+                <% if editor.doorkeeper_application %>
+                  <span class="badge badge-success">✅ Configurée</span>
+                  <br>
+                  <small class="text-muted">
+                    Client ID: <code><%= editor.client_id %></code>
+                  </small>
+                <% else %>
+                  <span class="badge badge-warning">⚠️ Manquante</span>
+                <% end %>
+              </td>
+              <td>
+                <div class="action-buttons">
+                  <%= link_to "Voir", admin_editor_path(editor), class: "btn btn-sm btn-outline-primary" %>
+                  <%= link_to "Modifier", edit_admin_editor_path(editor), class: "btn btn-sm btn-outline-secondary" %>
+                  <% unless editor.doorkeeper_application %>
+                    <%= link_to "Sync OAuth", sync_doorkeeper_admin_editor_path(editor), 
+                        method: :patch, class: "btn btn-sm btn-outline-success" %>
+                  <% end %>
+                  <%= link_to "Supprimer", admin_editor_path(editor), 
+                      method: :delete, 
+                      class: "btn btn-sm btn-outline-danger",
+                      data: { 
+                        confirm: "Êtes-vous sûr de vouloir supprimer cet éditeur ?" 
+                      } %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="empty-state">
+      <h3>Aucun éditeur configuré</h3>
+      <p>Créez votre premier éditeur pour commencer à tester Fast Track.</p>
+      <%= link_to "Créer un éditeur", new_admin_editor_path, class: "btn btn-primary" %>
+    </div>
+  <% end %>
+</div>
+
+<style>
+  .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .admin-header h1 {
+    font-size: 1.875rem;
+    font-weight: 700;
+    margin: 0;
+    color: #111827;
+  }
+
+  .editors-list {
+    background: white;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+  }
+
+  .table {
+    width: 100%;
+    margin-bottom: 0;
+  }
+
+  .table th {
+    background-color: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 0.75rem;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .badge-success {
+    background-color: #dcfce7;
+    color: #166534;
+  }
+
+  .badge-warning {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+
+  .badge-danger {
+    background-color: #fecaca;
+    color: #991b1b;
+  }
+
+  .external-link {
+    color: #2563eb;
+    text-decoration: none;
+  }
+
+  .external-link:hover {
+    text-decoration: underline;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #6b7280;
+  }
+
+  .empty-state h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #374151;
+  }
+
+  .btn {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    font-weight: 500;
+    text-align: center;
+    border: 1px solid transparent;
+    cursor: pointer;
+  }
+
+  .btn-primary {
+    background-color: #2563eb;
+    color: white;
+  }
+
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  .btn-outline-primary {
+    border-color: #2563eb;
+    color: #2563eb;
+    background: white;
+  }
+
+  .btn-outline-secondary {
+    border-color: #6b7280;
+    color: #6b7280;
+    background: white;
+  }
+
+  .btn-outline-success {
+    border-color: #059669;
+    color: #059669;
+    background: white;
+  }
+
+  .btn-outline-danger {
+    border-color: #dc2626;
+    color: #dc2626;
+    background: white;
+  }
+</style>
