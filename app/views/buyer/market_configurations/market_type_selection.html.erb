@@ -1,0 +1,122 @@
+<% content_for :title, "Sélection du type de marché - Fast Track" %>
+
+<div data-controller="market-type-selection">
+  <!-- Step Indicator -->
+  <ol class="step-indicator">
+    <li class="active">Type de marché</li>
+    <li>Documents requis</li>
+    <li>Confirmation</li>
+  </ol>
+
+  <!-- Flash Messages -->
+  <% if flash[:alert] %>
+    <div class="alert alert-error">
+      <%= flash[:alert] %>
+    </div>
+  <% end %>
+
+  <!-- Page Header -->
+  <div style="margin-bottom: 2rem;">
+    <h1 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">
+      Configuration Fast Track
+    </h1>
+    <p style="color: #6b7280;">
+      Sélectionnez le type de marché pour déterminer les documents obligatoires.
+    </p>
+  </div>
+
+  <!-- Market Type Selection Form -->
+  <%= form_with model: @market_configuration, 
+                url: documents_buyer_market_configurations_path, 
+                method: :get,
+                local: true,
+                data: { controller: "form-validation" } do |form| %>
+    
+    <div class="form-group">
+      <%= form.label :market_type, "Type de marché *", class: "form-label" %>
+      
+      <div style="display: grid; gap: 1rem; margin-top: 0.75rem;">
+        <% @market_types.each do |label, value| %>
+          <label style="display: flex; align-items: center; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s;"
+                 data-action="click->market-type-selection#selectType">
+            <%= form.radio_button :market_type, value, 
+                                  style: "margin-right: 0.75rem; width: 1.25rem; height: 1.25rem;",
+                                  required: true,
+                                  data: { action: "change->market-type-selection#updateSelection" } %>
+            <div>
+              <div style="font-weight: 600; margin-bottom: 0.25rem;">
+                <%= label %>
+              </div>
+              <div class="text-sm">
+                <%= case value
+                    when 'supplies'
+                      'Achat de biens, matériels, équipements et fournitures'
+                    when 'services'
+                      'Prestations de services, études, maintenance'
+                    when 'works'
+                      'Travaux de construction, rénovation, aménagement'
+                    end %>
+              </div>
+            </div>
+          </label>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
+      <div class="text-sm" style="color: #6b7280;">
+        * Champs obligatoires
+      </div>
+      
+      <%= form.submit "Continuer", 
+                      class: "btn btn-primary",
+                      style: "min-width: 120px;",
+                      data: { disable_with: "Chargement..." } %>
+    </div>
+  <% end %>
+
+  <!-- Information Box -->
+  <div style="margin-top: 2rem; padding: 1rem; background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 0.5rem;">
+    <div style="display: flex; align-items: flex-start;">
+      <div style="color: #0369a1; margin-right: 0.75rem; margin-top: 0.125rem;">
+        ℹ️
+      </div>
+      <div style="font-size: 0.875rem; color: #0369a1;">
+        <strong>À propos des types de marchés :</strong><br>
+        Chaque type de marché détermine automatiquement les documents obligatoires selon la réglementation.
+        Vous pourrez ensuite ajouter des documents optionnels selon vos besoins spécifiques.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="application/javascript" data-turbo-eval="false">
+  // Stimulus controller for market type selection
+  Stimulus.register("market-type-selection", class extends Stimulus.Controller {
+    selectType(event) {
+      // Visual feedback for label selection
+      const label = event.currentTarget;
+      const radio = label.querySelector('input[type="radio"]');
+      if (radio) {
+        radio.checked = true;
+        this.updateSelection({ target: radio });
+      }
+    }
+    
+    updateSelection(event) {
+      // Update visual state of all options
+      const allLabels = this.element.querySelectorAll('label[data-action*="selectType"]');
+      allLabels.forEach(label => {
+        const radio = label.querySelector('input[type="radio"]');
+        if (radio.checked) {
+          label.style.borderColor = '#2563eb';
+          label.style.backgroundColor = '#eff6ff';
+        } else {
+          label.style.borderColor = '#e5e7eb';
+          label.style.backgroundColor = 'transparent';
+        }
+      });
+    }
+  });
+</script>

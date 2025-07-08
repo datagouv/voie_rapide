@@ -4,6 +4,7 @@ module Buyer
   # Base controller for buyer (editor) functionality
   # Provides OAuth authentication and authorization for editor platforms
   class BaseController < ApplicationController
+    layout 'buyer'
     before_action :authenticate_editor!
     before_action :ensure_editor_authorized!
 

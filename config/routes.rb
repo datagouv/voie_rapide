@@ -8,7 +8,6 @@ Rails.application.routes.draw do
     resources :market_configurations, only: %i[new create] do
       collection do
         get :documents
-        post :documents, to: :documents
       end
 
       member do

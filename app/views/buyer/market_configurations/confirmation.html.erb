@@ -1,0 +1,200 @@
+<% content_for :title, "Configuration terminée - Fast Track" %>
+
+<div data-controller="confirmation">
+  <!-- Step Indicator -->
+  <ol class="step-indicator">
+    <li class="completed">Type de marché</li>
+    <li class="completed">Documents requis</li>
+    <li class="active">Confirmation</li>
+  </ol>
+
+  <!-- Success Message -->
+  <div class="alert alert-success">
+    <div style="display: flex; align-items: center;">
+      <span style="font-size: 1.5rem; margin-right: 0.75rem;">✅</span>
+      <div>
+        <strong>Configuration Fast Track terminée avec succès !</strong><br>
+        Votre marché est maintenant configuré et prêt à recevoir des candidatures.
+      </div>
+    </div>
+  </div>
+
+  <!-- Market Information Summary -->
+  <div style="margin-bottom: 2rem;">
+    <h1 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem;">
+      Récapitulatif de la configuration
+    </h1>
+    
+    <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1.5rem;">
+      <div style="display: grid; gap: 1rem;">
+        <div>
+          <div class="text-sm" style="color: #6b7280; margin-bottom: 0.25rem;">
+            Titre du marché
+          </div>
+          <div style="font-weight: 600;">
+            <%= @public_market.title %>
+          </div>
+        </div>
+        
+        <div>
+          <div class="text-sm" style="color: #6b7280; margin-bottom: 0.25rem;">
+            Type de marché
+          </div>
+          <div style="font-weight: 600;">
+            <%= case @public_market.market_type
+                when 'supplies' then 'Fournitures'
+                when 'services' then 'Services'
+                when 'works' then 'Travaux'
+                end %>
+          </div>
+        </div>
+        
+        <div>
+          <div class="text-sm" style="color: #6b7280; margin-bottom: 0.25rem;">
+            Date limite de candidature
+          </div>
+          <div style="font-weight: 600;">
+            <%= @public_market.deadline.strftime("%d/%m/%Y à %H:%M") %>
+          </div>
+        </div>
+        
+        <div>
+          <div class="text-sm" style="color: #6b7280; margin-bottom: 0.25rem;">
+            Documents requis
+          </div>
+          <div style="font-weight: 600;">
+            <%= @document_requirements.count %> document(s) au total
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fast Track ID -->
+  <div style="margin-bottom: 2rem;">
+    <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem;">
+      Identifiant Fast Track
+    </h2>
+    
+    <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 0.5rem; padding: 1.5rem;">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <div class="text-sm" style="color: #0369a1; margin-bottom: 0.5rem;">
+            ID Fast Track généré :
+          </div>
+          <div class="fast-track-id" style="font-size: 1.125rem;">
+            <%= @public_market.fast_track_id %>
+          </div>
+        </div>
+        <button type="button" 
+                onclick="navigator.clipboard.writeText('<%= @public_market.fast_track_id %>')"
+                style="padding: 0.5rem; background: #2563eb; color: white; border: none; border-radius: 0.25rem; cursor: pointer;"
+                title="Copier l'ID">
+          📋
+        </button>
+      </div>
+      <div class="text-sm" style="color: #0369a1; margin-top: 1rem;">
+        <strong>Important :</strong> Conservez cet identifiant pour référence. 
+        Il sera utilisé par votre plateforme pour recevoir les candidatures.
+      </div>
+    </div>
+  </div>
+
+  <!-- Document Requirements Summary -->
+  <div style="margin-bottom: 2rem;">
+    <h2 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem;">
+      Documents configurés
+    </h2>
+    
+    <div class="document-list">
+      <% @document_requirements.each do |document| %>
+        <% config = document.public_market_configurations.find { |c| c.public_market_id == @public_market.id } %>
+        <div class="document-item <%= 'mandatory' if config&.required? %>">
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="font-weight: 600;">
+                <%= document.nom %>
+              </div>
+              <span style="font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 9999px; font-weight: 600; 
+                           <%= if config&.required?
+                                 'background-color: #dcfce7; color: #166534;'
+                               else
+                                 'background-color: #fef3c7; color: #92400e;'
+                               end %>">
+                <%= config&.required? ? 'OBLIGATOIRE' : 'OPTIONNEL' %>
+              </span>
+            </div>
+            <% if document.description.present? %>
+              <div class="text-sm" style="margin-top: 0.25rem;">
+                <%= document.description %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Next Steps Information -->
+  <div style="background-color: #fffbeb; border: 1px solid #fed7aa; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+    <h3 style="font-size: 1.125rem; font-weight: 600; color: #92400e; margin-bottom: 1rem;">
+      Prochaines étapes
+    </h3>
+    <ol style="color: #92400e; margin-left: 1.5rem;">
+      <li style="margin-bottom: 0.5rem;">
+        Votre plateforme va recevoir l'ID Fast Track : <strong><%= @public_market.fast_track_id %></strong>
+      </li>
+      <li style="margin-bottom: 0.5rem;">
+        Les entreprises pourront candidater via Fast Track jusqu'au <%= @public_market.deadline.strftime("%d/%m/%Y à %H:%M") %>
+      </li>
+      <li style="margin-bottom: 0.5rem;">
+        Vous recevrez les candidatures sous forme de dossiers ZIP via votre plateforme
+      </li>
+      <li>
+        Chaque candidature inclura une attestation PDF officielle avec horodatage
+      </li>
+    </ol>
+  </div>
+
+  <!-- Actions -->
+  <div style="text-align: center;">
+    <button type="button" 
+            onclick="window.close()" 
+            class="btn btn-primary"
+            style="min-width: 200px;">
+      Terminer
+    </button>
+    <div class="text-sm" style="margin-top: 1rem; color: #6b7280;">
+      Cette fenêtre va se fermer automatiquement
+    </div>
+  </div>
+</div>
+
+<script type="application/javascript" data-turbo-eval="false">
+  // Stimulus controller for confirmation page
+  Stimulus.register("confirmation", class extends Stimulus.Controller {
+    connect() {
+      // Notify parent window of successful completion
+      this.notifyParent({
+        type: 'fasttrack:completed',
+        fastTrackId: '<%= @public_market.fast_track_id %>',
+        marketTitle: '<%= j @public_market.title %>',
+        deadline: '<%= @public_market.deadline.iso8601 %>',
+        documentsCount: <%= @document_requirements.count %>
+      });
+      
+      // Auto-close after 30 seconds if not manually closed
+      setTimeout(() => {
+        if (confirm('Fermer automatiquement cette fenêtre ?')) {
+          window.close();
+        }
+      }, 30000);
+    }
+    
+    notifyParent(data) {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage(data, '*');
+      }
+    }
+  });
+</script>

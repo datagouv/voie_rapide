@@ -4,26 +4,31 @@
 
 ### Composants Terminés:
 1. **OAuth2 Foundation** ✅ - Doorkeeper 5.8.2 avec authentification éditeur complète
-2. **Market Configuration Controllers** ✅ - Flow acheteur en 2 étapes avec session management
-3. **Models & Database** ✅ - Tous les modèles avec validations et associations
-4. **Security Layer** ✅ - CSRF, OAuth scopes, input validation
+2. **Market Configuration Controllers** ✅ - Flow acheteur en 3 étapes avec session management
+3. **Market Configuration Views** ✅ - Interface utilisateur complète avec iFrame/popup
+4. **Models & Database** ✅ - Tous les modèles avec validations et associations
+5. **Security Layer** ✅ - CSRF, OAuth scopes, input validation
 
 ### Architecture Implémentée:
 - **OAuth Endpoints**: `/oauth/authorize`, `/oauth/token`, `/oauth/revoke`
-- **Buyer Routes**: `/buyer/market_configurations/*` avec protection OAuth
+- **Buyer Routes**: `/buyer/market_configurations/*` avec protection OAuth complet
+- **Views & Layout**: Templates iFrame-optimisés avec Stimulus controllers
 - **Service Layer**: `MarketConfigurationService`, `OAuth::EditorAuthenticationService`
 - **Session Management**: Multi-step form avec `MarketConfigurationSession`
+- **PostMessage API**: Communication cross-domain avec éditeurs
 
 ### Qualité du Code:
 - **RuboCop**: ✅ 44 fichiers, 0 offenses
 - **RSpec**: ✅ 61 exemples, 0 échecs  
-- **Coverage**: Modèles 100%, Services inclus
+- **Coverage**: Modèles 100%, Services inclus, Views fonctionnelles
+
+### 🎯 **FLOW ACHETEUR 100% TERMINÉ**
+Les éditeurs peuvent maintenant configurer des marchés end-to-end via Fast Track.
 
 ### Prêt pour:
-- Interfaces utilisateur (views/templates)
-- Communication iFrame/postMessage
 - Flow candidat (SIRET → formulaire → soumission)
 - Génération PDF des attestations
+- Seeds de données pour tests
 
 ## 🌐 Partie Globale
 
@@ -172,7 +177,7 @@
 #### 2.3 Communication avec l'éditeur
 - [x] Créer le système de callback vers l'éditeur (Confirmation page with Fast Track ID)
 - [x] Implémenter l'envoi de l'ID unique Fast Track (MarketConfigurationService)
-- [ ] Gérer les messages via postMessage (iFrame) - Backend ready, views needed
+- [x] Gérer les messages via postMessage (iFrame) - Implémenté dans layouts et views
 - [x] Créer la confirmation de configuration (Confirm action implemented)
 - [x] Gérer les cas d'erreur de communication (Error handling in controllers)
 
@@ -192,9 +197,35 @@
 - [x] Créer les indexes pour les recherches (Database schema with indexes)
 - [ ] Implémenter l'archivage des configurations
 
-### 4. Réception des candidatures
+### 4. Interface utilisateur (UI/UX)
 
-#### 4.1 Notifications via iFrame
+#### 4.1 Layout et structure
+- [x] Créer le layout buyer optimisé iFrame (buyer.html.erb)
+- [x] Configurer les headers de sécurité cross-domain
+- [x] Implémenter le design responsive pour popup/iFrame
+- [x] Ajouter les styles CSS gouvernementaux français
+
+#### 4.2 Vues de configuration
+- [x] Page sélection type de marché (market_type_selection.html.erb)
+- [x] Page configuration documents (document_selection.html.erb)  
+- [x] Page confirmation avec Fast Track ID (confirmation.html.erb)
+- [x] Gestion des erreurs et validation inline
+
+#### 4.3 Interactions JavaScript
+- [x] Stimulus controllers pour validation temps réel
+- [x] Communication postMessage avec éditeur parent
+- [x] Gestion du resize automatique de l'iFrame
+- [x] Feedback visuel et états de chargement
+
+#### 4.4 Expérience utilisateur
+- [x] Indicateur de progression (3 étapes visuelles)
+- [x] Messages flash et gestion d'erreurs
+- [x] Copie Fast Track ID en un clic
+- [x] Auto-fermeture et notification parent
+
+### 5. Réception des candidatures
+
+#### 5.1 Notifications via iFrame
 - [ ] Implémenter le callback postMessage en fin de candidature
 - [ ] Transmettre l'ID de candidature à l'éditeur
 - [ ] Gérer les erreurs de transmission

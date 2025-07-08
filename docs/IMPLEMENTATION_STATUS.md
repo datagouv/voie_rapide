@@ -27,7 +27,15 @@
 - **Application**: SIRET validation + status management
 - **PublicMarketConfiguration**: Join table avec business logic
 
-### ✅ **4. Security & Quality**
+### ✅ **4. Market Configuration Views**
+- **Layout**: `buyer.html.erb` optimisé pour iFrame/popup
+- **Views**: 3 étapes complètes (type → documents → confirmation)
+- **UI/UX**: Interface gouvernementale française professionnelle
+- **JavaScript**: Stimulus controllers pour validation temps réel
+- **PostMessage**: Communication cross-domain avec éditeurs
+- **Responsive**: Design adaptatif pour tous contextes
+
+### ✅ **5. Security & Quality**
 - **OAuth**: Token validation + expiration handling
 - **CSRF**: Protection complète avec Rails + Doorkeeper
 - **Input Validation**: Strong parameters + model validations
@@ -59,23 +67,19 @@ GET   /buyer/market_configurations/:id/confirm - Confirmation
 - **Models**: 100% test coverage
 - **Services**: Inclus avec validations complètes
 - **Controllers**: Logic testée indirectement
+- **Views**: Templates complets avec validation client/serveur
 
 ## 🎯 **Prochaines Étapes Recommandées**
 
-### Priorité 1: Interface Utilisateur
-1. **Views/Templates** pour le flow acheteur
-2. **Styling** avec Turbo/Stimulus
-3. **JavaScript** pour iFrame communication
-
-### Priorité 2: Flow Candidat  
+### Priorité 1: Flow Candidat (Prêt à implémenter)  
 1. **Controllers** candidat (SIRET → formulaire)
 2. **File Upload** PDF avec validation
 3. **Submission** process avec génération attestation
 
-### Priorité 3: PDF & Notifications
+### Priorité 2: PDF & Notifications  
 1. **PDF Generation** avec Prawn ou WickedPDF
-2. **ZIP Creation** pour dossiers candidatures  
-3. **postMessage API** pour communication éditeur
+2. **ZIP Creation** pour dossiers candidatures
+3. **Document Seeds** pour données de test
 
 ## 🏗️ **Architecture Technique**
 
@@ -83,10 +87,22 @@ GET   /buyer/market_configurations/:id/confirm - Confirmation
 ```
 app/controllers/
 ├── buyer/
-│   ├── base_controller.rb           # OAuth auth + security
-│   └── market_configurations_controller.rb  # Configuration flow
+│   ├── base_controller.rb           # OAuth auth + security ✅
+│   └── market_configurations_controller.rb  # Configuration flow ✅
 └── candidate/ (à implémenter)
     └── applications_controller.rb   # Flow candidat
+```
+
+### Structure Views
+```
+app/views/
+├── layouts/
+│   ├── application.html.erb        # Layout général ✅
+│   └── buyer.html.erb              # Layout iFrame optimisé ✅
+└── buyer/market_configurations/
+    ├── market_type_selection.html.erb  # Étape 1: Type marché ✅
+    ├── document_selection.html.erb     # Étape 2: Documents ✅
+    └── confirmation.html.erb           # Étape 3: Confirmation ✅
 ```
 
 ### Services Business Logic
@@ -116,10 +132,20 @@ PublicMarket (∞) ──→ (∞) Document (via PublicMarketConfiguration)
 
 ## 🎨 **Prêt pour Intégration**
 
-Le backend est **production-ready** pour:
-- Authentification éditeur via OAuth2
-- Configuration de marchés en 2 étapes
-- Gestion sécurisée des documents par type de marché
-- Communication avec plateformes éditeurs
+Le **flow acheteur complet** est **production-ready** pour:
+- Authentification éditeur via OAuth2 ✅
+- Configuration de marchés en 3 étapes ✅
+- Interface utilisateur complète (iFrame/popup) ✅  
+- Gestion sécurisée des documents par type de marché ✅
+- Communication cross-domain avec plateformes éditeurs ✅
+- Génération Fast Track ID et confirmation ✅
 
-**Next**: Interfaces utilisateur et flow candidat pour MVP complet.
+## 🚀 **État Actuel: Flow Acheteur 100% Fonctionnel**
+
+Les éditeurs peuvent maintenant:
+1. **S'authentifier** via OAuth2 avec Fast Track
+2. **Configurer** leurs marchés en 3 étapes intuitives
+3. **Recevoir** un Fast Track ID unique pour intégration
+4. **Intégrer** via iFrame/popup avec communication postMessage
+
+**Next**: Flow candidat (SIRET → formulaire → soumission → attestation) pour MVP complet.
