@@ -1,0 +1,268 @@
+<% content_for :title, "Candidature soumise - #{@public_market.title}" %>
+
+<!-- Step Indicator -->
+<ol class="step-indicator">
+  <li class="completed">Information du marché</li>
+  <li class="completed">Identification</li>
+  <li class="completed">Formulaire</li>
+  <li class="active">Confirmation</li>
+</ol>
+
+<div class="candidate-card">
+  <div class="candidate-card-header" style="text-align: center;">
+    <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+    <h2 style="margin: 0; font-size: 1.75rem; color: #059669;">
+      Candidature soumise avec succès !
+    </h2>
+    <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 1.125rem;">
+      Votre candidature a été enregistrée et transmise
+    </p>
+  </div>
+  
+  <div class="candidate-card-body">
+    <!-- Submission Details -->
+    <div style="background-color: #d1fae5; border: 1px solid #a7f3d0; border-radius: 0.5rem; padding: 2rem; margin-bottom: 2rem; text-align: center;">
+      <h3 style="margin: 0 0 1.5rem 0; color: #065f46; font-size: 1.25rem;">
+        📋 Détails de votre soumission
+      </h3>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+        <div>
+          <strong style="color: #065f46;">ID de soumission</strong><br>
+          <code style="background-color: #a7f3d0; padding: 0.5rem 1rem; border-radius: 0.375rem; font-size: 1.125rem; color: #065f46; font-weight: bold;">
+            <%= @application.submission_id %>
+          </code>
+        </div>
+        
+        <div>
+          <strong style="color: #065f46;">Date de soumission</strong><br>
+          <span style="font-size: 1.125rem; color: #059669;">
+            <%= @application.submitted_at.strftime("%d/%m/%Y à %H:%M:%S") %>
+          </span>
+        </div>
+        
+        <div>
+          <strong style="color: #065f46;">SIRET</strong><br>
+          <span style="font-size: 1.125rem; color: #059669; font-family: monospace;">
+            <%= @application.formatted_siret %>
+          </span>
+        </div>
+      </div>
+      
+      <p style="margin: 0; color: #065f46; font-size: 0.875rem;">
+        <strong>Conservez précieusement cet ID de soumission</strong> - il constitue votre preuve de candidature
+      </p>
+    </div>
+
+    <!-- Market Information Recap -->
+    <div style="background-color: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+      <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1.125rem;">
+        🏛️ Récapitulatif du marché
+      </h3>
+      
+      <div style="display: grid; gap: 1rem;">
+        <div>
+          <strong>Marché :</strong>
+          <span style="margin-left: 0.5rem; color: #4b5563;"><%= @public_market.title %></span>
+        </div>
+        
+        <div>
+          <strong>Type :</strong>
+          <span style="margin-left: 0.5rem; color: #4b5563;">
+            <%= case @public_market.market_type
+                when 'supplies' then 'Fournitures'
+                when 'services' then 'Services'
+                when 'works' then 'Travaux'
+                end %>
+          </span>
+        </div>
+        
+        <div>
+          <strong>Date limite :</strong>
+          <span style="margin-left: 0.5rem; color: #4b5563;">
+            <%= @public_market.deadline.strftime("%d/%m/%Y à %H:%M") %>
+          </span>
+        </div>
+        
+        <div>
+          <strong>Fast Track ID :</strong>
+          <code style="background-color: #e5e7eb; padding: 0.25rem 0.5rem; border-radius: 0.25rem; margin-left: 0.5rem;">
+            <%= @public_market.fast_track_id %>
+          </code>
+        </div>
+      </div>
+    </div>
+
+    <!-- Critical Download Section -->
+    <div style="background-color: #fef2f2; border: 2px solid #fca5a5; border-radius: 0.5rem; padding: 2rem; margin-bottom: 2rem;">
+      <div style="display: flex; align-items: center; margin-bottom: 1.5rem;">
+        <div style="font-size: 2rem; margin-right: 1rem;">⚠️</div>
+        <div>
+          <h3 style="margin: 0; color: #991b1b; font-size: 1.25rem;">
+            IMPORTANT : Téléchargez votre attestation
+          </h3>
+          <p style="margin: 0.5rem 0 0 0; color: #7f1d1d;">
+            Cette attestation est votre <strong>preuve officielle</strong> de candidature
+          </p>
+        </div>
+      </div>
+      
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <%= link_to candidate_download_attestation_path(fast_track_id: @public_market.fast_track_id), 
+            class: "btn btn-primary btn-large",
+            style: "background-color: #dc2626; border-color: #dc2626; font-size: 1.125rem; padding: 1rem 2rem;",
+            target: "_blank" do %>
+          📄 Télécharger l'attestation PDF
+        <% end %>
+      </div>
+      
+      <div style="background-color: #fee2e2; border-radius: 0.375rem; padding: 1rem;">
+        <h4 style="margin: 0 0 0.5rem 0; color: #991b1b; font-size: 1rem;">
+          Pourquoi télécharger cette attestation ?
+        </h4>
+        <ul style="margin: 0; padding-left: 1.5rem; color: #7f1d1d; font-size: 0.875rem;">
+          <li>Elle fait foi de la réception de votre candidature par l'administration</li>
+          <li>Elle contient l'horodatage officiel de votre soumission</li>
+          <li>Elle peut être exigée en cas de litige ou de vérification</li>
+          <li>Elle constitue votre accusé de réception officiel</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Next Steps -->
+    <div style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+      <h3 style="margin: 0 0 1rem 0; color: #1e40af; font-size: 1.125rem;">
+        📋 Étapes suivantes
+      </h3>
+      
+      <div style="display: grid; gap: 1rem;">
+        <div style="display: flex; align-items: start;">
+          <div style="background-color: #3b82f6; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: bold; margin-right: 1rem; flex-shrink: 0;">1</div>
+          <div>
+            <strong style="color: #1e40af;">Téléchargez votre attestation</strong><br>
+            <span style="color: #1e3a8a; font-size: 0.875rem;">Conservez-la comme preuve de votre candidature</span>
+          </div>
+        </div>
+        
+        <div style="display: flex; align-items: start;">
+          <div style="background-color: #3b82f6; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: bold; margin-right: 1rem; flex-shrink: 0;">2</div>
+          <div>
+            <strong style="color: #1e40af;">Surveillez vos e-mails</strong><br>
+            <span style="color: #1e3a8a; font-size: 0.875rem;">Vous recevrez les communications officielles sur <%= @application.email %></span>
+          </div>
+        </div>
+        
+        <div style="display: flex; align-items: start;">
+          <div style="background-color: #3b82f6; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: bold; margin-right: 1rem; flex-shrink: 0;">3</div>
+          <div>
+            <strong style="color: #1e40af;">Attendez la réponse</strong><br>
+            <span style="color: #1e3a8a; font-size: 0.875rem;">Les résultats de la procédure vous seront communiqués selon le calendrier prévu</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact Support -->
+    <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+      <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1.125rem;">
+        💬 Besoin d'aide ?
+      </h3>
+      
+      <p style="margin: 0 0 1rem 0; color: #4b5563;">
+        Si vous avez des questions concernant votre candidature ou la procédure :
+      </p>
+      
+      <ul style="margin: 0; padding-left: 1.5rem; color: #4b5563;">
+        <li>Contactez l'organisme responsable du marché</li>
+        <li>Mentionnez toujours votre ID de soumission : <strong><%= @application.submission_id %></strong></li>
+        <li>Conservez une copie de tous vos documents</li>
+      </ul>
+    </div>
+
+    <!-- Action Buttons -->
+    <div style="display: flex; gap: 1rem; justify-content: center; align-items: center; flex-wrap: wrap;">
+      <%= link_to candidate_download_attestation_path(fast_track_id: @public_market.fast_track_id), 
+          class: "btn btn-primary",
+          target: "_blank" do %>
+        📄 Télécharger l'attestation
+      <% end %>
+      
+      <button type="button" onclick="window.print()" class="btn btn-secondary">
+        🖨️ Imprimer cette page
+      </button>
+    </div>
+
+    <!-- Technical Information -->
+    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb; text-align: center;">
+      <p class="text-sm text-muted">
+        Soumission effectuée via Fast Track - République Française<br>
+        Horodatage : <%= @application.submitted_at.iso8601 %><br>
+        Cette page peut être conservée comme preuve de soumission
+      </p>
+    </div>
+  </div>
+</div>
+
+<script type="application/javascript" data-turbo-eval="false">
+  document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus on download button
+    const downloadButton = document.querySelector('a[href*="download_attestation"]');
+    if (downloadButton) {
+      downloadButton.focus();
+    }
+    
+    // Show reminder after 30 seconds if still on page
+    setTimeout(() => {
+      if (document.visibilityState === 'visible') {
+        const reminder = document.createElement('div');
+        reminder.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background-color: #dc2626;
+          color: white;
+          padding: 1rem;
+          border-radius: 0.5rem;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          z-index: 1000;
+          max-width: 300px;
+        `;
+        reminder.innerHTML = `
+          <strong>⚠️ N'oubliez pas !</strong><br>
+          Téléchargez votre attestation avant de fermer cette page.
+          <button onclick="this.parentElement.remove()" style="float: right; background: none; border: none; color: white; font-size: 1.2rem; cursor: pointer;">×</button>
+        `;
+        document.body.appendChild(reminder);
+        
+        // Auto-remove after 10 seconds
+        setTimeout(() => {
+          if (reminder.parentElement) {
+            reminder.remove();
+          }
+        }, 10000);
+      }
+    }, 30000);
+  });
+</script>
+
+<style>
+  @media print {
+    .btn {
+      display: none;
+    }
+    
+    .step-indicator {
+      display: none;
+    }
+    
+    body {
+      font-size: 12pt;
+      line-height: 1.4;
+    }
+    
+    .candidate-card {
+      box-shadow: none;
+      border: 1px solid #000;
+    }
+  }
+</style>

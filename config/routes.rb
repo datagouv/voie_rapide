@@ -25,6 +25,19 @@ Rails.application.routes.draw do
     end
   end
 
+  # Candidate routes - Public access for companies
+  namespace :candidate do
+    get ':fast_track_id', to: 'applications#entry', as: :entry
+    get ':fast_track_id/siret', to: 'applications#siret', as: :siret
+    post ':fast_track_id/siret', to: 'applications#validate_siret', as: :validate_siret
+    get ':fast_track_id/form', to: 'applications#form', as: :form
+    patch ':fast_track_id/form', to: 'applications#update', as: :update
+    post ':fast_track_id/submit', to: 'applications#submit', as: :submit
+    get ':fast_track_id/confirmation', to: 'applications#confirmation', as: :confirmation
+    get ':fast_track_id/download', to: 'applications#download_attestation', as: :download_attestation
+    get 'error', to: 'applications#error', as: :error
+  end
+
   # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.

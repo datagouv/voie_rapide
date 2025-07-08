@@ -12,6 +12,9 @@ FactoryBot.define do
     trait :submitted do
       status { 'submitted' }
       submitted_at { Time.current }
+      contact_person { 'John Doe' }
+      phone { '0123456789' }
+      submission_id { "FT#{Time.current.strftime('%Y%m%d')}#{SecureRandom.hex(4).upcase}" }
     end
 
     trait :with_attestation do

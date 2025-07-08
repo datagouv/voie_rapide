@@ -1,0 +1,130 @@
+<% content_for :title, "Candidature - #{@public_market.title}" %>
+
+<!-- Step Indicator -->
+<ol class="step-indicator">
+  <li class="active">Information du marché</li>
+  <li>Identification</li>
+  <li>Formulaire</li>
+  <li>Confirmation</li>
+</ol>
+
+<div class="candidate-card">
+  <div class="candidate-card-header">
+    <h2 style="margin: 0; font-size: 1.5rem; color: #1f2937;">
+      <%= @public_market.title %>
+    </h2>
+  </div>
+  
+  <div class="candidate-card-body">
+    <!-- Market Information -->
+    <div style="margin-bottom: 2rem;">
+      <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">
+        Informations sur le marché
+      </h3>
+      
+      <div style="background-color: #f3f4f6; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1.5rem;">
+        <div style="display: grid; gap: 1rem;">
+          <div>
+            <strong>Type de marché :</strong>
+            <span style="margin-left: 0.5rem;">
+              <%= case @public_market.market_type
+                  when 'supplies' then 'Fournitures'
+                  when 'services' then 'Services'
+                  when 'works' then 'Travaux'
+                  end %>
+            </span>
+          </div>
+          
+          <div>
+            <strong>Date limite de candidature :</strong>
+            <span style="margin-left: 0.5rem; color: #dc2626; font-weight: 600;">
+              <%= @public_market.deadline.strftime("%d/%m/%Y à %H:%M") %>
+            </span>
+          </div>
+          
+          <% if @public_market.description.present? %>
+            <div>
+              <strong>Description :</strong>
+              <div style="margin-top: 0.5rem; color: #4b5563;">
+                <%= simple_format(@public_market.description) %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Required Documents -->
+    <div style="margin-bottom: 2rem;">
+      <h3 style="font-size: 1.25rem; font-weight: 600; margin-bottom: 1rem; color: #374151;">
+        Documents requis pour candidater
+      </h3>
+      
+      <div style="background-color: #fffbeb; border: 1px solid #fed7aa; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 1.5rem;">
+        <h4 style="margin: 0 0 1rem 0; color: #92400e; font-size: 1rem;">
+          Documents obligatoires
+        </h4>
+        <ul style="margin: 0; padding-left: 1.5rem; color: #92400e;">
+          <% @document_requirements.select(&:required?).each do |config| %>
+            <li style="margin-bottom: 0.5rem;">
+              <strong><%= config.document.nom %></strong>
+              <% if config.document.description.present? %>
+                <br><small style="color: #a16207;"><%= config.document.description %></small>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+      
+      <% if @document_requirements.any? { |config| !config.required? } %>
+        <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 0.5rem; padding: 1.5rem;">
+          <h4 style="margin: 0 0 1rem 0; color: #1e40af; font-size: 1rem;">
+            Documents optionnels
+          </h4>
+          <ul style="margin: 0; padding-left: 1.5rem; color: #1e40af;">
+            <% @document_requirements.reject(&:required?).each do |config| %>
+              <li style="margin-bottom: 0.5rem;">
+                <strong><%= config.document.nom %></strong>
+                <% if config.document.description.present? %>
+                  <br><small style="color: #1e3a8a;"><%= config.document.description %></small>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+          <p style="margin: 1rem 0 0 0; font-size: 0.875rem; color: #1e3a8a;">
+            <em>Ces documents peuvent renforcer votre candidature mais ne sont pas obligatoires.</em>
+          </p>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Important Notice -->
+    <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+      <h4 style="margin: 0 0 1rem 0; color: #991b1b; font-size: 1rem;">
+        ⚠️ Informations importantes
+      </h4>
+      <ul style="margin: 0; padding-left: 1.5rem; color: #991b1b;">
+        <li>Seuls les documents au format PDF sont acceptés</li>
+        <li>Taille maximale par document : 10 MB</li>
+        <li>Une fois votre candidature soumise, aucune modification ne sera possible</li>
+        <li>Vous devrez disposer du SIRET de votre entreprise</li>
+        <li>Vous recevrez une attestation de dépôt à télécharger impérativement</li>
+      </ul>
+    </div>
+
+    <!-- Action Button -->
+    <div class="text-center">
+      <%= link_to candidate_siret_path(fast_track_id: @public_market.fast_track_id), 
+          class: "btn btn-primary btn-large" do %>
+        Commencer ma candidature
+      <% end %>
+    </div>
+    
+    <!-- Market ID Display -->
+    <div style="text-align: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+      <p class="text-sm text-muted">
+        ID Fast Track : <code style="background-color: #f3f4f6; padding: 0.25rem 0.5rem; border-radius: 0.25rem;"><%= @public_market.fast_track_id %></code>
+      </p>
+    </div>
+  </div>
+</div>

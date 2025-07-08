@@ -1,0 +1,179 @@
+<% content_for :title, "Erreur - Fast Track" %>
+
+<div class="candidate-card">
+  <div class="candidate-card-header" style="text-align: center;">
+    <div style="font-size: 3rem; margin-bottom: 1rem;">❌</div>
+    <h2 style="margin: 0; font-size: 1.75rem; color: #dc2626;">
+      Une erreur est survenue
+    </h2>
+  </div>
+  
+  <div class="candidate-card-body">
+    <!-- Error Message -->
+    <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem; padding: 2rem; margin-bottom: 2rem; text-align: center;">
+      <h3 style="margin: 0 0 1rem 0; color: #991b1b; font-size: 1.25rem;">
+        <%= case @error_type
+            when 'market_not_found'
+              '🔍 Marché introuvable'
+            when 'market_expired'
+              '⏰ Délai dépassé'
+            when 'market_inactive'
+              '🚫 Marché inactif'
+            when 'already_submitted'
+              '✅ Candidature déjà soumise'
+            when 'attestation_not_available'
+              '📄 Attestation indisponible'
+            else
+              '⚠️ Erreur technique'
+            end %>
+      </h3>
+      
+      <p style="margin: 0; color: #7f1d1d; font-size: 1.125rem; line-height: 1.6;">
+        <%= @error_message %>
+      </p>
+    </div>
+
+    <!-- Specific Error Guidance -->
+    <% case @error_type %>
+    <% when 'market_not_found' %>
+      <div style="background-color: #fffbeb; border: 1px solid #fed7aa; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+        <h4 style="margin: 0 0 1rem 0; color: #92400e; font-size: 1rem;">
+          💡 Que faire ?
+        </h4>
+        <ul style="margin: 0; padding-left: 1.5rem; color: #a16207;">
+          <li>Vérifiez l'URL ou le lien que vous avez utilisé</li>
+          <li>Assurez-vous que l'ID Fast Track est correct</li>
+          <li>Contactez l'organisme qui vous a communiqué ce lien</li>
+          <li>Le marché a peut-être été supprimé ou l'ID modifié</li>
+        </ul>
+      </div>
+
+    <% when 'market_expired' %>
+      <div style="background-color: #fffbeb; border: 1px solid #fed7aa; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+        <h4 style="margin: 0 0 1rem 0; color: #92400e; font-size: 1rem;">
+          💡 Que faire ?
+        </h4>
+        <ul style="margin: 0; padding-left: 1.5rem; color: #a16207;">
+          <li>La date limite de candidature est dépassée</li>
+          <li>Les candidatures ne sont plus acceptées pour ce marché</li>
+          <li>Contactez l'organisme pour connaître les prochaines opportunités</li>
+          <li>Surveillez les futurs appels d'offres similaires</li>
+        </ul>
+      </div>
+
+    <% when 'market_inactive' %>
+      <div style="background-color: #fffbeb; border: 1px solid #fed7aa; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+        <h4 style="margin: 0 0 1rem 0; color: #92400e; font-size: 1rem;">
+          💡 Que faire ?
+        </h4>
+        <ul style="margin: 0; padding-left: 1.5rem; color: #a16207;">
+          <li>Ce marché n'est plus disponible pour les candidatures</li>
+          <li>Il peut avoir été annulé ou suspendu</li>
+          <li>Contactez l'organisme responsable pour plus d'informations</li>
+          <li>Consultez les avis officiels de modification ou d'annulation</li>
+        </ul>
+      </div>
+
+    <% when 'already_submitted' %>
+      <div style="background-color: #d1fae5; border: 1px solid #a7f3d0; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+        <h4 style="margin: 0 0 1rem 0; color: #065f46; font-size: 1rem;">
+          ✅ Candidature déjà enregistrée
+        </h4>
+        <p style="margin: 0; color: #059669;">
+          Une candidature a déjà été soumise avec ce SIRET pour ce marché. 
+          Vous ne pouvez soumettre qu'une seule candidature par entreprise et par marché.
+        </p>
+      </div>
+
+    <% when 'attestation_not_available' %>
+      <div style="background-color: #fffbeb; border: 1px solid #fed7aa; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+        <h4 style="margin: 0 0 1rem 0; color: #92400e; font-size: 1rem;">
+          💡 Que faire ?
+        </h4>
+        <ul style="margin: 0; padding-left: 1.5rem; color: #a16207;">
+          <li>L'attestation n'est disponible qu'après soumission de la candidature</li>
+          <li>Assurez-vous d'avoir terminé et soumis votre candidature</li>
+          <li>L'attestation peut prendre quelques instants à être générée</li>
+          <li>Contactez le support technique si le problème persiste</li>
+        </ul>
+      </div>
+
+    <% else %>
+      <div style="background-color: #fffbeb; border: 1px solid #fed7aa; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+        <h4 style="margin: 0 0 1rem 0; color: #92400e; font-size: 1rem;">
+          💡 Que faire ?
+        </h4>
+        <ul style="margin: 0; padding-left: 1.5rem; color: #a16207;">
+          <li>Actualisez la page et réessayez</li>
+          <li>Vérifiez votre connexion internet</li>
+          <li>Contactez le support technique si le problème persiste</li>
+          <li>Notez l'heure de l'erreur pour faciliter le diagnostic</li>
+        </ul>
+      </div>
+    <% end %>
+
+    <!-- Support Information -->
+    <div style="background-color: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+      <h4 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem;">
+        💬 Besoin d'aide ?
+      </h4>
+      
+      <div style="display: grid; gap: 1rem;">
+        <div>
+          <strong style="color: #374151;">Contactez l'organisme responsable :</strong><br>
+          <span style="color: #4b5563; font-size: 0.875rem;">
+            Référez-vous aux coordonnées mentionnées dans l'appel d'offres ou sur la plateforme d'origine
+          </span>
+        </div>
+        
+        <div>
+          <strong style="color: #374151;">Informations à fournir :</strong><br>
+          <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem; color: #4b5563; font-size: 0.875rem;">
+            <li>Type d'erreur : <%= @error_type %></li>
+            <li>Heure : <%= Time.current.strftime("%d/%m/%Y à %H:%M:%S") %></li>
+            <% if params[:fast_track_id] %>
+              <li>ID Fast Track : <%= params[:fast_track_id] %></li>
+            <% end %>
+            <li>Votre SIRET (si applicable)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Options -->
+    <div style="text-align: center;">
+      <% if @error_type == 'already_submitted' %>
+        <p style="margin-bottom: 1.5rem; color: #6b7280;">
+          Votre candidature a déjà été soumise pour ce marché
+        </p>
+      <% else %>
+        <%= link_to "Réessayer", 
+            request.referer || root_path, 
+            class: "btn btn-primary",
+            style: "margin-right: 1rem;" %>
+      <% end %>
+      
+      <button type="button" onclick="window.history.back()" class="btn btn-secondary">
+        ← Retour
+      </button>
+    </div>
+
+    <!-- Technical Details (for debugging) -->
+    <% if Rails.env.development? %>
+      <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+        <details style="font-size: 0.875rem; color: #6b7280;">
+          <summary style="cursor: pointer; margin-bottom: 0.5rem;">Détails techniques (développement)</summary>
+          <div style="background-color: #f3f4f6; padding: 1rem; border-radius: 0.375rem; font-family: monospace;">
+            <strong>Error Type:</strong> <%= @error_type %><br>
+            <strong>Fast Track ID:</strong> <%= params[:fast_track_id] %><br>
+            <strong>Session Data:</strong> <%= session.to_hash.inspect %><br>
+            <strong>Params:</strong> <%= params.to_unsafe_h.inspect %><br>
+            <strong>Referer:</strong> <%= request.referer %><br>
+            <strong>User Agent:</strong> <%= request.user_agent %><br>
+            <strong>Timestamp:</strong> <%= Time.current.iso8601 %>
+          </div>
+        </details>
+      </div>
+    <% end %>
+  </div>
+</div>

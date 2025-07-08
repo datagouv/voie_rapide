@@ -1,0 +1,447 @@
+<% content_for :title, "Candidature - #{@public_market.title}" %>
+
+<!-- Step Indicator -->
+<ol class="step-indicator">
+  <li class="completed">Information du marché</li>
+  <li class="completed">Identification</li>
+  <li class="active">Formulaire</li>
+  <li>Confirmation</li>
+</ol>
+
+<div class="candidate-card">
+  <div class="candidate-card-header">
+    <h2 style="margin: 0; font-size: 1.5rem; color: #1f2937;">
+      Formulaire de candidature
+    </h2>
+    <p style="margin: 0.5rem 0 0 0; color: #6b7280;">
+      Entreprise : <%= @company_info[:name] %> - SIRET : <%= @application.formatted_siret %>
+    </p>
+  </div>
+  
+  <div class="candidate-card-body">
+    <!-- Auto-save Status -->
+    <div id="save-status" style="display: none; padding: 0.75rem; margin-bottom: 1.5rem; border-radius: 0.5rem; background-color: #d1fae5; border: 1px solid #a7f3d0; color: #065f46; font-size: 0.875rem;">
+      ✓ Données sauvegardées automatiquement
+    </div>
+
+    <!-- Company Information (Read-only) -->
+    <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+      <h3 style="margin: 0 0 1rem 0; color: #374151; font-size: 1.125rem;">
+        🏢 Informations de l'entreprise
+      </h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+        <div>
+          <strong>Raison sociale :</strong><br>
+          <span style="color: #4b5563;"><%= @company_info[:name] %></span>
+        </div>
+        <div>
+          <strong>Forme juridique :</strong><br>
+          <span style="color: #4b5563;"><%= @company_info[:legal_form] %></span>
+        </div>
+        <div>
+          <strong>Activité :</strong><br>
+          <span style="color: #4b5563;"><%= @company_info[:activity] %></span>
+        </div>
+        <div>
+          <strong>Adresse :</strong><br>
+          <span style="color: #4b5563;"><%= @company_info[:address] %></span>
+        </div>
+      </div>
+    </div>
+
+    <%= form_with model: @application, url: candidate_update_path(fast_track_id: @public_market.fast_track_id), 
+        method: :patch, local: false, html: { id: 'candidate-form', multipart: true } do |form| %>
+      
+      <!-- Contact Information -->
+      <div style="margin-bottom: 2rem;">
+        <h3 style="margin: 0 0 1.5rem 0; color: #374151; font-size: 1.125rem;">
+          📞 Informations de contact
+        </h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+          <div class="form-group">
+            <%= form.label :email, "Adresse e-mail *", class: "form-label" %>
+            <%= form.email_field :email, 
+                class: "form-control", 
+                placeholder: "contact@entreprise.fr",
+                required: true,
+                data: { autosave: true } %>
+            <div class="text-sm text-muted" style="margin-top: 0.25rem;">
+              Cette adresse sera utilisée pour les communications officielles
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <%= form.label :phone, "Téléphone *", class: "form-label" %>
+            <%= form.telephone_field :phone, 
+                class: "form-control", 
+                placeholder: "01 23 45 67 89",
+                required: true,
+                data: { autosave: true } %>
+          </div>
+          
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <%= form.label :contact_person, "Personne de contact *", class: "form-label" %>
+            <%= form.text_field :contact_person, 
+                class: "form-control", 
+                placeholder: "Prénom Nom, fonction",
+                required: true,
+                data: { autosave: true } %>
+            <div class="text-sm text-muted" style="margin-top: 0.25rem;">
+              Nom et fonction de la personne responsable de cette candidature
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Document Upload Section -->
+      <div style="margin-bottom: 2rem;">
+        <h3 style="margin: 0 0 1.5rem 0; color: #374151; font-size: 1.125rem;">
+          📄 Documents à fournir
+        </h3>
+        
+        <!-- Required Documents -->
+        <% required_docs = @document_requirements.select(&:required?) %>
+        <% if required_docs.any? %>
+          <div style="background-color: #fffbeb; border: 1px solid #fed7aa; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 1.5rem;">
+            <h4 style="margin: 0 0 1rem 0; color: #92400e; font-size: 1rem;">
+              Documents obligatoires
+            </h4>
+            
+            <% required_docs.each do |config| %>
+              <div class="document-upload-item" style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #fed7aa;">
+                <div style="margin-bottom: 1rem;">
+                  <strong style="color: #92400e;"><%= config.document.nom %></strong>
+                  <% if config.document.description.present? %>
+                    <div style="margin-top: 0.25rem; font-size: 0.875rem; color: #a16207;">
+                      <%= config.document.description %>
+                    </div>
+                  <% end %>
+                </div>
+                
+                <div class="form-group">
+                  <%= form.file_field "document_uploads[#{config.document.id}]", 
+                      class: "form-control",
+                      accept: ".pdf",
+                      data: { 
+                        document_id: config.document.id,
+                        required: true,
+                        upload_trigger: true
+                      } %>
+                  <div class="text-sm text-muted" style="margin-top: 0.25rem;">
+                    Format PDF uniquement, taille maximale : 10 MB
+                  </div>
+                  <div class="upload-status" data-document-id="<%= config.document.id %>" style="margin-top: 0.5rem; display: none;"></div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+        
+        <!-- Optional Documents -->
+        <% optional_docs = @document_requirements.reject(&:required?) %>
+        <% if optional_docs.any? %>
+          <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 0.5rem; padding: 1.5rem;">
+            <h4 style="margin: 0 0 1rem 0; color: #1e40af; font-size: 1rem;">
+              Documents optionnels
+            </h4>
+            <p style="margin: 0 0 1rem 0; font-size: 0.875rem; color: #1e3a8a;">
+              <em>Ces documents peuvent renforcer votre candidature</em>
+            </p>
+            
+            <% optional_docs.each do |config| %>
+              <div class="document-upload-item" style="margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #bae6fd;">
+                <div style="margin-bottom: 1rem;">
+                  <strong style="color: #1e40af;"><%= config.document.nom %></strong>
+                  <% if config.document.description.present? %>
+                    <div style="margin-top: 0.25rem; font-size: 0.875rem; color: #1e3a8a;">
+                      <%= config.document.description %>
+                    </div>
+                  <% end %>
+                </div>
+                
+                <div class="form-group">
+                  <%= form.file_field "document_uploads[#{config.document.id}]", 
+                      class: "form-control",
+                      accept: ".pdf",
+                      data: { 
+                        document_id: config.document.id,
+                        required: false,
+                        upload_trigger: true
+                      } %>
+                  <div class="text-sm text-muted" style="margin-top: 0.25rem;">
+                    Format PDF uniquement, taille maximale : 10 MB
+                  </div>
+                  <div class="upload-status" data-document-id="<%= config.document.id %>" style="margin-top: 0.5rem; display: none;"></div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+
+      <!-- Form Completion Status -->
+      <div id="completion-status" style="background-color: #f3f4f6; border: 1px solid #d1d5db; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+        <h4 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem;">
+          📋 État de votre candidature
+        </h4>
+        <ul id="completion-checklist" style="margin: 0; padding-left: 1.5rem; color: #4b5563;">
+          <li id="contact-complete" class="incomplete">Informations de contact complètes</li>
+          <li id="required-docs-complete" class="incomplete">Tous les documents obligatoires fournis</li>
+        </ul>
+      </div>
+
+      <!-- Submit Button -->
+      <div style="display: flex; gap: 1rem; justify-content: space-between; align-items: center;">
+        <%= link_to candidate_siret_path(fast_track_id: @public_market.fast_track_id), 
+            class: "btn btn-secondary" do %>
+          ← Changer de SIRET
+        <% end %>
+        
+        <button type="button" id="submit-application" class="btn btn-primary btn-large" disabled>
+          Soumettre ma candidature
+        </button>
+      </div>
+    <% end %>
+
+    <!-- Market Info Reminder -->
+    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb; text-align: center;">
+      <p class="text-sm text-muted">
+        Marché : <%= @public_market.title %><br>
+        Date limite : <%= @public_market.deadline.strftime("%d/%m/%Y à %H:%M") %>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Submission Confirmation Modal -->
+<div id="submission-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center;">
+  <div style="background-color: white; border-radius: 0.5rem; padding: 2rem; max-width: 500px; margin: 2rem;">
+    <h3 style="margin: 0 0 1rem 0; color: #1f2937;">Confirmer la soumission</h3>
+    <p style="margin: 0 0 1.5rem 0; color: #4b5563; line-height: 1.6;">
+      Êtes-vous sûr de vouloir soumettre votre candidature ? Une fois soumise, 
+      <strong>aucune modification ne sera possible</strong>.
+    </p>
+    <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+      <button type="button" id="cancel-submission" class="btn btn-secondary">
+        Annuler
+      </button>
+      <button type="button" id="confirm-submission" class="btn btn-primary">
+        Confirmer la soumission
+      </button>
+    </div>
+  </div>
+</div>
+
+<script type="application/javascript" data-turbo-eval="false">
+  document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('candidate-form');
+    const submitButton = document.getElementById('submit-application');
+    const saveStatus = document.getElementById('save-status');
+    const modal = document.getElementById('submission-modal');
+    let isSubmitting = false;
+
+    // Auto-save functionality
+    function showSaveStatus() {
+      saveStatus.style.display = 'block';
+      setTimeout(() => {
+        saveStatus.style.display = 'none';
+      }, 3000);
+    }
+
+    function autoSave() {
+      if (isSubmitting) return;
+      
+      const formData = new FormData(form);
+      
+      fetch(form.action, {
+        method: 'PATCH',
+        body: formData,
+        headers: {
+          'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content,
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showSaveStatus();
+          checkFormCompletion();
+        }
+      })
+      .catch(error => {
+        console.error('Auto-save failed:', error);
+      });
+    }
+
+    // Form completion checking
+    function checkFormCompletion() {
+      const email = document.getElementById('application_email').value;
+      const phone = document.getElementById('application_phone').value;
+      const contact = document.getElementById('application_contact_person').value;
+      
+      const contactComplete = email && phone && contact;
+      const contactItem = document.getElementById('contact-complete');
+      
+      if (contactComplete) {
+        contactItem.className = 'complete';
+        contactItem.style.color = '#059669';
+      } else {
+        contactItem.className = 'incomplete';
+        contactItem.style.color = '#dc2626';
+      }
+
+      // Check required documents
+      const requiredUploads = document.querySelectorAll('[data-required="true"]');
+      let requiredDocsComplete = true;
+      
+      requiredUploads.forEach(upload => {
+        if (!upload.files.length) {
+          requiredDocsComplete = false;
+        }
+      });
+
+      const docsItem = document.getElementById('required-docs-complete');
+      if (requiredDocsComplete) {
+        docsItem.className = 'complete';
+        docsItem.style.color = '#059669';
+      } else {
+        docsItem.className = 'incomplete';
+        docsItem.style.color = '#dc2626';
+      }
+
+      // Enable/disable submit button
+      const canSubmit = contactComplete && requiredDocsComplete;
+      submitButton.disabled = !canSubmit;
+      
+      if (canSubmit) {
+        submitButton.style.opacity = '1';
+        submitButton.classList.remove('btn-disabled');
+      } else {
+        submitButton.style.opacity = '0.6';
+        submitButton.classList.add('btn-disabled');
+      }
+    }
+
+    // Auto-save on input change
+    document.querySelectorAll('[data-autosave="true"]').forEach(input => {
+      let timeout;
+      input.addEventListener('input', function() {
+        clearTimeout(timeout);
+        timeout = setTimeout(autoSave, 1000);
+      });
+    });
+
+    // File upload handling
+    document.querySelectorAll('[data-upload-trigger="true"]').forEach(input => {
+      input.addEventListener('change', function() {
+        const file = this.files[0];
+        const documentId = this.dataset.documentId;
+        const statusDiv = document.querySelector(`[data-document-id="${documentId}"]`);
+        
+        if (file) {
+          // Validate file
+          if (file.type !== 'application/pdf') {
+            statusDiv.innerHTML = '<span style="color: #dc2626;">❌ Seuls les fichiers PDF sont acceptés</span>';
+            statusDiv.style.display = 'block';
+            this.value = '';
+            return;
+          }
+          
+          if (file.size > 10 * 1024 * 1024) { // 10MB
+            statusDiv.innerHTML = '<span style="color: #dc2626;">❌ Le fichier est trop volumineux (max 10 MB)</span>';
+            statusDiv.style.display = 'block';
+            this.value = '';
+            return;
+          }
+          
+          statusDiv.innerHTML = `<span style="color: #059669;">✓ ${file.name} sélectionné</span>`;
+          statusDiv.style.display = 'block';
+          
+          // Trigger auto-save
+          setTimeout(autoSave, 500);
+        } else {
+          statusDiv.style.display = 'none';
+        }
+        
+        checkFormCompletion();
+      });
+    });
+
+    // Submission handling
+    submitButton.addEventListener('click', function() {
+      modal.style.display = 'flex';
+    });
+
+    document.getElementById('cancel-submission').addEventListener('click', function() {
+      modal.style.display = 'none';
+    });
+
+    document.getElementById('confirm-submission').addEventListener('click', function() {
+      isSubmitting = true;
+      modal.style.display = 'none';
+      
+      submitButton.disabled = true;
+      submitButton.textContent = 'Soumission en cours...';
+      
+      // Submit to the submit endpoint
+      fetch('<%= candidate_submit_path(fast_track_id: @public_market.fast_track_id) %>', {
+        method: 'POST',
+        headers: {
+          'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content,
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => {
+        if (response.redirected) {
+          window.location.href = response.url;
+        } else {
+          return response.json();
+        }
+      })
+      .then(data => {
+        if (data && !data.success) {
+          alert(data.error || 'Une erreur est survenue');
+          submitButton.disabled = false;
+          submitButton.textContent = 'Soumettre ma candidature';
+          isSubmitting = false;
+        }
+      })
+      .catch(error => {
+        console.error('Submission failed:', error);
+        alert('Une erreur est survenue lors de la soumission');
+        submitButton.disabled = false;
+        submitButton.textContent = 'Soumettre ma candidature';
+        isSubmitting = false;
+      });
+    });
+
+    // Initial form completion check
+    checkFormCompletion();
+  });
+</script>
+
+<style>
+  .complete::before {
+    content: "✓ ";
+    color: #059669;
+    font-weight: bold;
+  }
+  
+  .incomplete::before {
+    content: "○ ";
+    color: #dc2626;
+    font-weight: bold;
+  }
+  
+  .form-control:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    outline: none;
+  }
+  
+  .btn-disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+</style>
