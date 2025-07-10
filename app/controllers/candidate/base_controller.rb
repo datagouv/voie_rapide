@@ -10,15 +10,28 @@ module Candidate
     private
 
     def find_public_market
-      fast_track_id = params[:fast_track_id] || session[:fast_track_id]
+      fast_track_id = extract_fast_track_id
 
-      if fast_track_id
-        @public_market = PublicMarket.find_by(fast_track_id: fast_track_id)
-        session[:fast_track_id] = fast_track_id if @public_market
-      end
+      assign_public_market(fast_track_id) if fast_track_id
+      store_platform_callback
 
-      return if @public_market
+      handle_market_not_found unless @public_market
+    end
 
+    def extract_fast_track_id
+      params[:fast_track_id] || session[:fast_track_id]
+    end
+
+    def assign_public_market(fast_track_id)
+      @public_market = PublicMarket.find_by(fast_track_id: fast_track_id)
+      session[:fast_track_id] = fast_track_id if @public_market
+    end
+
+    def store_platform_callback
+      session[:platform_callback_url] = params[:callback_url] if params[:callback_url].present?
+    end
+
+    def handle_market_not_found
       redirect_to candidate_error_path(error: 'market_not_found')
     end
 
@@ -49,6 +62,11 @@ module Candidate
       session.delete(:siret)
       session.delete(:application_id)
       session.delete(:fast_track_id)
+      session.delete(:platform_callback_url)
+    end
+
+    def platform_callback_url
+      session[:platform_callback_url]
     end
   end
 end

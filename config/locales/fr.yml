@@ -1,0 +1,45 @@
+fr:
+  admin:
+    editors:
+      created: 'Éditeur créé avec succès.'
+      updated: 'Éditeur mis à jour avec succès.'
+      deleted: 'Éditeur supprimé avec succès.'
+      doorkeeper_synced: 'Application Doorkeeper synchronisée.'
+      
+  buyer:
+    market_configurations:
+      select_market_type: 'Please select a market type first'
+      creation_failed: 'Failed to create market configuration'
+      correct_errors: 'Please correct the errors below'
+      
+  candidate:
+    applications:
+      invalid_siret: 'SIRET invalide. Veuillez saisir un SIRET de 14 chiffres.'
+      incomplete_form: "Le formulaire n'est pas complet. Veuillez vérifier tous les champs requis."
+      
+  editor_auth:
+    invalid_client: 'Éditeur ou Client ID invalide'
+    
+  activerecord:
+    attributes:
+      application:
+        siret: 'SIRET'
+        public_market_id: 'Public Market'
+      public_market_configuration:
+        public_market_id: 'Public Market'
+        document_id: 'Document'
+    errors:
+      models:
+        application:
+          attributes:
+            siret:
+              invalid: 'must contain exactly 14 digits'
+            public_market_id:
+              taken: 'An application already exists for this SIRET on this market'
+        public_market_configuration:
+          attributes:
+            public_market_id:
+              taken: 'This document is already configured for this market'
+      messages:
+        invalid: 'is invalid'
+        taken: 'has already been taken'

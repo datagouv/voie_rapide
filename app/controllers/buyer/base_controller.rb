@@ -10,12 +10,12 @@ module Buyer
 
     protected
 
-    # Authenticate editor via Doorkeeper OAuth token
+    # Authenticate editor via Doorkeeper OAuth token (for redirect flow)
     def authenticate_editor!
       doorkeeper_authorize!
     end
 
-    # Get current editor from OAuth token
+    # Get current editor from OAuth token or session
     def current_editor
       @current_editor ||= find_current_editor
     end
@@ -40,16 +40,41 @@ module Buyer
 
     # Get current OAuth token
     def doorkeeper_token
-      @doorkeeper_token ||= Doorkeeper::OAuth::Token.authenticate(
+      @doorkeeper_token ||= find_doorkeeper_token
+    end
+
+    private
+
+    def find_doorkeeper_token
+      session_token || api_token
+    end
+
+    def session_token
+      return if session[:oauth_access_token].blank?
+
+      Rails.logger.info 'Using session access token for authentication'
+      token = Doorkeeper::AccessToken.find_by(token: session[:oauth_access_token])
+
+      if token&.acceptable?(nil)
+        token
+      else
+        Rails.logger.warn 'Session token invalid or expired, clearing session'
+        session.delete(:oauth_access_token)
+        nil
+      end
+    end
+
+    def api_token
+      Doorkeeper::OAuth::Token.authenticate(
         request,
         *Doorkeeper.configuration.access_token_methods
       )
     end
 
-    # Configure iframe-friendly responses
+    # Configure redirect-friendly responses
     def configure_iframe_response
-      response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-      response.headers['Content-Security-Policy'] = "frame-ancestors 'self' #{current_editor&.callback_url}"
+      response.headers['X-Frame-Options'] = 'DENY'
+      response.headers['Content-Security-Policy'] = "frame-ancestors 'none'"
     end
 
     # Handle OAuth errors gracefully

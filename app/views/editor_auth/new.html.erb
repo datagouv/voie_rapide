@@ -1,0 +1,123 @@
+<% content_for :title, "Authentification Éditeur - Fast Track" %>
+
+<div style="max-width: 600px; margin: 2rem auto; padding: 2rem;">
+  <div style="text-align: center; margin-bottom: 2rem;">
+    <h1 style="color: #1f2937; margin-bottom: 0.5rem;">🔐 Authentification Éditeur</h1>
+    <p style="color: #6b7280;">Authentifiez-vous pour accéder aux services Fast Track</p>
+  </div>
+
+  <div style="background: white; border-radius: 0.75rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); padding: 2rem;">
+    <%= form_with url: editor_auth_path, method: :post, local: true, 
+        html: { id: 'editor-auth-form' } do |form| %>
+      
+      <div style="margin-bottom: 1.5rem;">
+        <%= form.label :editor_id, "Éditeur", 
+            style: "display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;" %>
+        <%= form.select :editor_id, 
+            options_from_collection_for_select(@editors, :id, :name), 
+            { prompt: "Sélectionnez votre éditeur" },
+            { 
+              class: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500",
+              style: "width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem;",
+              required: true,
+              onchange: "updateClientId()"
+            } %>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <%= form.label :client_id, "Client ID", 
+            style: "display: block; font-weight: 600; margin-bottom: 0.5rem; color: #374151;" %>
+        <%= form.text_field :client_id, 
+            style: "width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem; font-family: monospace;",
+            placeholder: "Saisissez votre Client ID",
+            required: true %>
+        <div style="margin-top: 0.25rem; font-size: 0.875rem; color: #6b7280;">
+          Le Client ID associé à votre éditeur
+        </div>
+      </div>
+
+      <% if flash[:error] %>
+        <div style="background-color: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 1rem; border-radius: 0.375rem; margin-bottom: 1.5rem;">
+          <%= flash[:error] %>
+        </div>
+      <% end %>
+
+      <div style="margin-bottom: 1.5rem;">
+        <%= form.submit "S'authentifier", 
+            style: "width: 100%; background-color: #2563eb; color: white; padding: 0.75rem; border: none; border-radius: 0.375rem; font-weight: 600; cursor: pointer; transition: background-color 0.2s;",
+            onmouseover: "this.style.backgroundColor='#1d4ed8'",
+            onmouseout: "this.style.backgroundColor='#2563eb'" %>
+      </div>
+
+      <% if params[:redirect_to] %>
+        <%= form.hidden_field :redirect_to, value: params[:redirect_to] %>
+      <% end %>
+    <% end %>
+  </div>
+
+  <!-- Development Helper -->
+  <% if Rails.env.development? %>
+    <div style="background-color: #fffbeb; border: 1px solid #fed7aa; border-radius: 0.5rem; padding: 1.5rem; margin-top: 2rem;">
+      <h3 style="margin: 0 0 1rem 0; color: #92400e; font-size: 1rem;">
+        💡 Aide Développement
+      </h3>
+      <p style="margin: 0 0 1rem 0; color: #a16207; font-size: 0.875rem;">
+        Éditeur de développement configuré :
+      </p>
+      <% dev_editor = Editor.find_by(name: 'Fast Track Dev Editor') %>
+      <% if dev_editor %>
+        <div style="background-color: #fed7aa; padding: 1rem; border-radius: 0.375rem; font-family: monospace; font-size: 0.875rem;">
+          <strong>Nom :</strong> <%= dev_editor.name %><br>
+          <strong>Client ID :</strong> <%= dev_editor.client_id %><br>
+          <strong>Status :</strong> <%= dev_editor.authorized? ? "✅ Autorisé" : "❌ Non autorisé" %>
+        </div>
+      <% else %>
+        <div style="color: #dc2626;">
+          ❌ Aucun éditeur de développement trouvé. Exécutez <code>bin/rails db:seed</code>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+
+  <!-- Back Link -->
+  <div style="text-align: center; margin-top: 2rem;">
+    <%= link_to "← Retour à l'accueil", root_path, 
+        style: "color: #6b7280; text-decoration: none; font-size: 0.875rem;" %>
+  </div>
+</div>
+
+<script>
+  // Auto-fill client ID based on selected editor
+  function updateClientId() {
+    const editorSelect = document.getElementById('editor_id');
+    const clientIdInput = document.getElementById('client_id');
+    const selectedOption = editorSelect.options[editorSelect.selectedIndex];
+    
+    if (selectedOption && selectedOption.value) {
+      // In a real implementation, you'd fetch this via AJAX
+      // For development, we'll use the known dev editor client ID
+      <% if Rails.env.development? && (dev_editor = Editor.find_by(name: 'Fast Track Dev Editor')) %>
+        if (selectedOption.text === '<%= dev_editor.name %>') {
+          clientIdInput.value = '<%= dev_editor.client_id %>';
+        }
+      <% end %>
+    } else {
+      clientIdInput.value = '';
+    }
+  }
+
+  // Auto-select dev editor in development
+  <% if Rails.env.development? && (dev_editor = Editor.find_by(name: 'Fast Track Dev Editor')) %>
+    document.addEventListener('DOMContentLoaded', function() {
+      const editorSelect = document.getElementById('editor_id');
+      const devEditorOption = Array.from(editorSelect.options).find(option => 
+        option.text === '<%= dev_editor.name %>'
+      );
+      
+      if (devEditorOption) {
+        editorSelect.value = devEditorOption.value;
+        updateClientId();
+      }
+    });
+  <% end %>
+</script>

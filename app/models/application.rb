@@ -4,9 +4,9 @@ class Application < ApplicationRecord
   belongs_to :public_market
   has_many_attached :documents
 
-  validates :siret, presence: true, format: { with: /\A\d{14}\z/, message: 'must contain exactly 14 digits' }
+  validates :siret, presence: true, format: { with: /\A\d{14}\z/ }
   validates :company_name, presence: true
-  validates :public_market_id, uniqueness: { scope: :siret, message: 'An application already exists for this SIRET on this market' }
+  validates :public_market_id, uniqueness: { scope: :siret }
   validates :status, inclusion: { in: %w[in_progress submitted] }
   validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }, if: :submitted?
   validates :contact_person, presence: true, if: :submitted?
@@ -33,7 +33,7 @@ class Application < ApplicationRecord
   end
 
   def formatted_siret
-    return unless siret.present?
+    return if siret.blank?
 
     siret.gsub(/(\d{3})(\d{3})(\d{3})(\d{5})/, '\1 \2 \3 \4')
   end

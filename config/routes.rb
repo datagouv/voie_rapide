@@ -48,6 +48,11 @@ Rails.application.routes.draw do
   # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
+  # Editor authentication routes
+  get 'editor/auth', to: 'editor_auth#new', as: :editor_auth
+  post 'editor/auth', to: 'editor_auth#create'
+  delete 'editor/auth', to: 'editor_auth#destroy', as: :editor_logout
+
   # Root path for development
   root 'home#index'
 end

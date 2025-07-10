@@ -4,7 +4,7 @@ class PublicMarketConfiguration < ApplicationRecord
   belongs_to :public_market
   belongs_to :document
 
-  validates :public_market_id, uniqueness: { scope: :document_id, message: 'This document is already configured for this market' }
+  validates :public_market_id, uniqueness: { scope: :document_id }
 
   scope :required, -> { where(required: true) }
   scope :optional, -> { where(required: false) }

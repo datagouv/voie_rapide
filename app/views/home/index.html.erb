@@ -32,6 +32,32 @@
     </div>
   </div>
 
+  <!-- Authentication Status -->
+  <% if editor_authenticated? %>
+    <div class="auth-section">
+      <div style="background-color: #d1fae5; border: 1px solid #a7f3d0; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+        <h3 style="margin: 0 0 0.5rem 0; color: #065f46;">✅ Authentifié en tant qu'éditeur</h3>
+        <p style="margin: 0; color: #059669;">
+          <strong><%= current_editor.name %></strong> (Client ID: <code><%= current_editor.client_id %></code>)
+        </p>
+        <div style="margin-top: 1rem;">
+          <%= link_to "Tester OAuth", "/oauth/authorize?client_id=#{current_editor.client_id}&redirect_uri=#{CGI.escape(current_editor.callback_url)}&response_type=code&scope=market_config", class: "btn btn-primary", style: "margin-right: 1rem;" %>
+          <%= link_to "Se déconnecter", editor_logout_path, method: :delete, class: "btn btn-outline-secondary" %>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <div class="auth-section">
+      <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+        <h3 style="margin: 0 0 0.5rem 0; color: #991b1b;">🔐 Authentification requise</h3>
+        <p style="margin: 0 0 1rem 0; color: #7f1d1d;">
+          Vous devez vous authentifier en tant qu'éditeur pour accéder aux fonctionnalités OAuth.
+        </p>
+        <%= link_to "S'authentifier", editor_auth_path, class: "btn btn-primary" %>
+      </div>
+    </div>
+  <% end %>
+
   <!-- Quick Actions -->
   <div class="actions-section">
     <h2>Actions Rapides</h2>

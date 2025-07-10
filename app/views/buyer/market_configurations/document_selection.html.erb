@@ -44,6 +44,7 @@
   <!-- Market Configuration Form -->
   <%= form_with model: @market_configuration,
                 url: buyer_market_configurations_path,
+                scope: :market_configuration,
                 local: true,
                 data: { controller: "form-validation" } do |form| %>
     
@@ -202,42 +203,3 @@
   <% end %>
 </div>
 
-<script type="application/javascript" data-turbo-eval="false">
-  // Stimulus controller for document selection
-  Stimulus.register("document-selection", class extends Stimulus.Controller {
-    static targets = ["count"]
-    
-    connect() {
-      this.updateCount();
-    }
-    
-    updateCount() {
-      const checkedBoxes = this.element.querySelectorAll('input[name*="optional_document_ids"]:checked');
-      if (this.hasCountTarget) {
-        this.countTarget.textContent = checkedBoxes.length;
-      }
-    }
-  });
-  
-  // Form validation controller
-  Stimulus.register("form-validation", class extends Stimulus.Controller {
-    validateField(event) {
-      const field = event.target;
-      const isValid = field.checkValidity();
-      
-      // Visual feedback
-      if (isValid) {
-        field.style.borderColor = '#059669';
-      } else {
-        field.style.borderColor = '#dc2626';
-      }
-      
-      // Reset to default after 2 seconds
-      setTimeout(() => {
-        if (field.style.borderColor !== '#2563eb') {
-          field.style.borderColor = '#d1d5db';
-        }
-      }, 2000);
-    }
-  });
-</script>

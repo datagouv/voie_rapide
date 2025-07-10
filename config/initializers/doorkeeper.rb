@@ -6,13 +6,15 @@ Doorkeeper.configure do
   orm :active_record
 
   # This block will be called to check whether the resource owner is authenticated or not.
-  # For our use case, we don't have traditional user authentication - editors authenticate via OAuth
-  # The resource owner is actually the editor platform (procurement system)
+  # For editor-to-editor OAuth, we use client-based authentication rather than user authentication
+  # The "resource owner" in our case is the editor platform (identified by client_id)
   resource_owner_authenticator do
-    # For editor-to-editor OAuth, we identify the resource owner by the editor making the request
-    # This will be populated during the OAuth flow when an editor authenticates
-    current_editor_id = session[:current_editor_id]
-    current_editor_id ? Editor.find(current_editor_id) : nil
+    # For editor-to-editor OAuth, we don't require individual user authentication
+    # The authorization is granted to the editor platform (client) itself
+    # Return a virtual resource owner representing the authorizing system
+    # Use struct definition to avoid constant definition warning
+    resource_owner_struct = Struct.new(:id, :name)
+    resource_owner_struct.new('fast_track_system', 'Fast Track Authorization System')
   end
 
   # If you didn't skip applications controller from Doorkeeper routes in your application routes.rb
@@ -269,10 +271,8 @@ Doorkeeper.configure do
   # Change the way access token is authenticated from the request object.
   # By default it retrieves first from the `HTTP_AUTHORIZATION` header, then
   # falls back to the `:access_token` or `:bearer_token` params from the `params` object.
-  # Check out https://github.com/doorkeeper-gem/doorkeeper/wiki/Changing-how-clients-are-authenticated
-  # for more information on customization
-  #
-  # access_token_methods :from_bearer_authorization, :from_access_token_param, :from_bearer_param
+  # For iframe integration, we need to accept tokens from query parameters
+  access_token_methods :from_bearer_authorization, :from_access_token_param, :from_bearer_param
 
   # Forces the usage of the HTTPS protocol in non-native redirect uris (enabled
   # by default in non-development environments). OAuth2 delegates security in

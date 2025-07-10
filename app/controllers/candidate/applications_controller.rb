@@ -40,9 +40,9 @@ module Candidate
 
     # Update application data
     def update
-      application_params = params.require(:application).permit(
-        :company_name, :email, :phone, :contact_person,
-        document_uploads: {}
+      application_params = params.expect(
+        application: [:company_name, :email, :phone, :contact_person,
+                      { document_uploads: {} }]
       )
 
       if @application.update(application_params)
@@ -96,6 +96,8 @@ module Candidate
       @error_message = error_message_for(@error_type)
     end
 
+    helper_method :platform_callback_url
+
     private
 
     def find_or_create_application
@@ -140,7 +142,7 @@ module Candidate
       document_uploads = params[:application][:document_uploads]
 
       document_uploads.each do |document_id, file|
-        next unless file.present?
+        next if file.blank?
 
         document = Document.find(document_id)
         @application.documents.attach(
@@ -165,7 +167,7 @@ module Candidate
     end
 
     def handle_invalid_siret
-      flash.now[:error] = 'SIRET invalide. Veuillez saisir un SIRET de 14 chiffres.'
+      flash.now[:error] = I18n.t('candidate.applications.invalid_siret')
       render :siret
     end
 
@@ -182,7 +184,7 @@ module Candidate
     end
 
     def handle_incomplete_application
-      flash[:error] = 'Le formulaire n\'est pas complet. Veuillez vérifier tous les champs requis.'
+      flash[:error] = I18n.t('candidate.applications.incomplete_form')
       redirect_to candidate_form_path(fast_track_id: @public_market.fast_track_id)
     end
 

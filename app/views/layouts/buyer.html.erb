@@ -7,26 +7,31 @@
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
-    <!-- iFrame optimized styling -->
+    <!-- Redirect flow optimized styling -->
     <meta name="robots" content="noindex">
     
     <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
     
     <style>
-      /* iFrame optimized base styles */
+      /* Redirect flow optimized base styles */
       body {
         margin: 0;
-        padding: 1rem;
+        padding: 2rem;
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         line-height: 1.5;
         color: #1a1a1a;
-        background: #ffffff;
+        background: #f8fafc;
+        min-height: 100vh;
       }
       
       .buyer-layout {
-        max-width: 600px;
+        max-width: 800px;
         margin: 0 auto;
+        background: white;
+        padding: 2rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
       }
       
       .step-indicator {
@@ -173,33 +178,31 @@
       <%= yield %>
     </div>
     
-    <!-- PostMessage communication for iFrame -->
+    <!-- Redirect flow handling -->
     <script>
-      // Notify parent window of content changes
-      const notifyParent = (data) => {
-        if (window.parent && window.parent !== window) {
-          window.parent.postMessage(data, '*');
-        }
-      };
-      
-      // Notify parent of page loads and size changes
+      // Handle page loading states for redirect flow
       document.addEventListener('DOMContentLoaded', () => {
-        notifyParent({
-          type: 'fasttrack:loaded',
-          height: document.body.scrollHeight
-        });
+        // Set focus on main content for better UX
+        const mainContent = document.querySelector('.buyer-layout');
+        if (mainContent) {
+          mainContent.focus();
+        }
       });
       
-      // Handle form submissions
+      // Handle form submissions with loading states
       document.addEventListener('turbo:submit-start', () => {
-        notifyParent({ type: 'fasttrack:loading' });
+        const submitButton = document.querySelector('button[type="submit"]');
+        if (submitButton) {
+          submitButton.disabled = true;
+          submitButton.textContent = 'Traitement en cours...';
+        }
       });
       
       document.addEventListener('turbo:submit-end', () => {
-        notifyParent({
-          type: 'fasttrack:loaded',
-          height: document.body.scrollHeight
-        });
+        const submitButton = document.querySelector('button[type="submit"]');
+        if (submitButton) {
+          submitButton.disabled = false;
+        }
       });
     </script>
   </body>

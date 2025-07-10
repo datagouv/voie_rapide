@@ -1,35 +1,45 @@
 # Guide d'implémentation du flux candidat Fast Track
 
-Ce guide détaille l'implémentation complète du flux candidat pour les entreprises souhaitant candidater aux marchés publics via Fast Track. Il complète le guide d'implémentation de l'éditeur fictif (`FAKE_EDITOR_IMPLEMENTATION_GUIDE.md`).
+Ce guide détaille l'implémentation complète du flux candidat pour les entreprises souhaitant candidater aux marchés publics via Fast Track, incluant l'intégration avec les plateformes d'éditeurs via un flux de redirection.
 
 ## Table des matières
 
 1. [Vue d'ensemble du flux candidat](#vue-densemble-du-flux-candidat)
 2. [Architecture technique](#architecture-technique)
-3. [Étapes du flux candidat](#étapes-du-flux-candidat)
-4. [Implémentation des contrôleurs](#implémentation-des-contrôleurs)
-5. [Modèles et validations](#modèles-et-validations)
-6. [Services métier](#services-métier)
-7. [Vues et interface utilisateur](#vues-et-interface-utilisateur)
-8. [Gestion des sessions](#gestion-des-sessions)
-9. [Upload et gestion des documents](#upload-et-gestion-des-documents)
-10. [Génération des attestations PDF](#génération-des-attestations-pdf)
-11. [Gestion des erreurs](#gestion-des-erreurs)
-12. [Tests et validation](#tests-et-validation)
-13. [Sécurité et conformité](#sécurité-et-conformité)
-14. [Déploiement et monitoring](#déploiement-et-monitoring)
+3. [Intégration avec les plateformes](#intégration-avec-les-plateformes)
+4. [Étapes du flux candidat](#étapes-du-flux-candidat)
+5. [Implémentation des contrôleurs](#implémentation-des-contrôleurs)
+6. [Modèles et validations](#modèles-et-validations)
+7. [Services métier](#services-métier)
+8. [Vues et interface utilisateur](#vues-et-interface-utilisateur)
+9. [Gestion des sessions](#gestion-des-sessions)
+10. [Upload et gestion des documents](#upload-et-gestion-des-documents)
+11. [Génération des attestations PDF](#génération-des-attestations-pdf)
+12. [Gestion des erreurs](#gestion-des-erreurs)
+13. [Tests et validation](#tests-et-validation)
+14. [Sécurité et conformité](#sécurité-et-conformité)
+15. [Déploiement et monitoring](#déploiement-et-monitoring)
 
 ## Vue d'ensemble du flux candidat
 
 ### Processus métier
 
-Le flux candidat Fast Track permet aux entreprises de candidater simplement aux marchés publics :
+Le flux candidat Fast Track permet aux entreprises de candidater simplement aux marchés publics via deux modes d'accès :
 
-1. **Point d'entrée** : L'entreprise accède via un lien fourni par la plateforme d'éditeur
+#### Mode Direct (Accès public)
+1. **Point d'entrée** : L'entreprise accède directement via un lien contenant le Fast Track ID
 2. **Identification** : Saisie et validation du SIRET de l'entreprise
 3. **Formulaire** : Remplissage des informations et upload des documents requis
 4. **Soumission** : Validation finale et soumission de la candidature
 5. **Attestation** : Téléchargement de l'attestation de dépôt officielle
+
+#### Mode Plateforme (Intégration éditeur)
+1. **Redirection** : La plateforme redirige vers Fast Track avec Fast Track ID + callback URL
+2. **Identification** : Saisie et validation du SIRET de l'entreprise
+3. **Formulaire** : Remplissage des informations et upload des documents requis
+4. **Soumission** : Validation finale et soumission de la candidature
+5. **Callback** : Redirection vers la plateforme avec ID de soumission
+6. **Confirmation** : La plateforme affiche la confirmation de candidature
 
 ### Contraintes techniques
 
@@ -38,6 +48,7 @@ Le flux candidat Fast Track permet aux entreprises de candidater simplement aux 
 - **Documents PDF uniquement** : Validation stricte des formats
 - **Soumission unique** : Une seule candidature par SIRET et par marché
 - **Attestation obligatoire** : Preuve officielle de dépôt
+- **Callback sécurisé** : Validation des URL de callback et paramètres d'état
 
 ## Architecture technique
 
@@ -64,7 +75,184 @@ app/models/
 ```
 app/services/candidate/
 ├── application_submission_service.rb  # Soumission atomique
-└── attestation_pdf_service.rb        # Génération PDF
+├── attestation_pdf_service.rb        # Génération PDF
+└── platform_callback_service.rb      # Gestion des callbacks plateformes
+```
+
+## Intégration avec les plateformes
+
+### Flux de redirection plateforme
+
+#### Étapes d'intégration
+
+1. **Initiation** : La plateforme redirige vers Fast Track
+2. **Configuration** : L'utilisateur complète sa candidature
+3. **Callback** : Fast Track redirige vers la plateforme avec les résultats
+4. **Traitement** : La plateforme traite la réponse et met à jour son état
+
+#### URL de redirection
+
+```
+GET /candidate/:fast_track_id?callback_url=https://platform.com/callback&state=security_token
+```
+
+#### Paramètres requis
+
+- `fast_track_id` : Identifiant unique du marché
+- `callback_url` : URL de callback de la plateforme (optionnel)
+- `state` : Token de sécurité pour CSRF protection (optionnel)
+
+### Callback de retour
+
+#### Format de callback
+
+```
+GET https://platform.com/callback?
+  submission_id=FT20250709ABC123&
+  siret=12345678901234&
+  status=submitted&
+  state=security_token
+```
+
+#### Paramètres de callback
+
+- `submission_id` : ID unique de la soumission Fast Track
+- `siret` : SIRET de l'entreprise candidate
+- `status` : Statut de la candidature (submitted, cancelled, error)
+- `state` : Token de sécurité (si fourni lors de l'initiation)
+
+### Exemple d'implémentation plateforme
+
+#### Node.js/Express
+
+```javascript
+// Route pour initier la candidature
+app.post('/markets/:marketId/apply', (req, res) => {
+  const { marketId } = req.params;
+  const { fastTrackId } = req.body;
+  
+  // Générer un token de sécurité
+  const state = require('crypto').randomBytes(16).toString('hex');
+  
+  // Stocker l'état en session
+  req.session.candidateStates = req.session.candidateStates || {};
+  req.session.candidateStates[state] = {
+    marketId: marketId,
+    initiatedAt: new Date().toISOString()
+  };
+  
+  // Construire l'URL de redirection
+  const callbackUrl = `${req.protocol}://${req.get('host')}/candidate-callback`;
+  const fastTrackUrl = new URL(`/candidate/${fastTrackId}`, 'https://fasttrack.gouv.fr');
+  fastTrackUrl.searchParams.append('callback_url', callbackUrl);
+  fastTrackUrl.searchParams.append('state', state);
+  
+  res.redirect(fastTrackUrl.toString());
+});
+
+// Route de callback
+app.get('/candidate-callback', (req, res) => {
+  const { submission_id, siret, status, state } = req.query;
+  
+  try {
+    // Valider le paramètre state
+    if (!state || !req.session.candidateStates || !req.session.candidateStates[state]) {
+      throw new Error('Invalid state parameter');
+    }
+    
+    const stateData = req.session.candidateStates[state];
+    delete req.session.candidateStates[state];
+    
+    // Traiter le résultat
+    if (status === 'submitted') {
+      // Mettre à jour la base de données
+      updateMarketApplication(stateData.marketId, {
+        submissionId: submission_id,
+        siret: siret,
+        status: 'submitted',
+        submittedAt: new Date()
+      });
+      
+      res.redirect(`/markets/${stateData.marketId}?application=success`);
+    } else if (status === 'cancelled') {
+      res.redirect(`/markets/${stateData.marketId}?application=cancelled`);
+    } else {
+      res.redirect(`/markets/${stateData.marketId}?application=error`);
+    }
+    
+  } catch (error) {
+    console.error('Candidate callback error:', error.message);
+    res.redirect('/error?message=' + encodeURIComponent(error.message));
+  }
+});
+```
+
+#### Rails
+
+```ruby
+# app/controllers/candidate_applications_controller.rb
+class CandidateApplicationsController < ApplicationController
+  def create
+    market = Market.find(params[:market_id])
+    
+    # Générer un token de sécurité
+    state = SecureRandom.hex(16)
+    session[:candidate_states] ||= {}
+    session[:candidate_states][state] = {
+      market_id: market.id,
+      initiated_at: Time.current.iso8601
+    }
+    
+    # Construire l'URL de redirection
+    callback_url = candidate_callback_url
+    fast_track_url = "#{ENV['FASTTRACK_BASE_URL']}/candidate/#{market.fast_track_id}"
+    
+    redirect_params = {
+      callback_url: callback_url,
+      state: state
+    }
+    
+    redirect_url = "#{fast_track_url}?#{redirect_params.to_query}"
+    redirect_to redirect_url, allow_other_host: true
+  end
+  
+  def callback
+    submission_id = params[:submission_id]
+    siret = params[:siret]
+    status = params[:status]
+    state = params[:state]
+    
+    # Valider le paramètre state
+    unless state && session[:candidate_states] && session[:candidate_states][state]
+      redirect_to root_path, alert: 'Invalid callback state'
+      return
+    end
+    
+    state_data = session[:candidate_states][state]
+    session[:candidate_states].delete(state)
+    
+    market = Market.find(state_data[:market_id])
+    
+    case status
+    when 'submitted'
+      # Mettre à jour l'application
+      market.candidate_applications.create!(
+        submission_id: submission_id,
+        siret: siret,
+        status: 'submitted',
+        submitted_at: Time.current
+      )
+      
+      redirect_to market_path(market), notice: 'Candidature soumise avec succès!'
+    when 'cancelled'
+      redirect_to market_path(market), notice: 'Candidature annulée'
+    else
+      redirect_to market_path(market), alert: 'Erreur lors de la candidature'
+    end
+  rescue ActiveRecord::RecordNotFound
+    redirect_to root_path, alert: 'Marché non trouvé'
+  end
+end
 ```
 
 ## Étapes du flux candidat
@@ -73,24 +261,34 @@ app/services/candidate/
 
 **Route** : `GET /candidate/:fast_track_id`
 
+**Paramètres optionnels** :
+- `callback_url` : URL de callback de la plateforme
+- `state` : Token de sécurité pour CSRF protection
+
 **Objectifs** :
 - Afficher les informations du marché
 - Lister les documents requis (obligatoires/optionnels)
 - Fournir les informations importantes (format, délais)
+- Stocker les paramètres de callback en session
 
 **Contrôleur** :
 ```ruby
 def entry
+  # Stocker les paramètres de callback en session
+  if params[:callback_url].present?
+    session[:platform_callback] = {
+      url: params[:callback_url],
+      state: params[:state]
+    }
+  end
+  
   @document_requirements = @public_market.public_market_configurations
                                          .includes(:document)
                                          .order('documents.obligatoire DESC, documents.nom ASC')
+  
+  @has_platform_callback = session[:platform_callback].present?
 end
 ```
-
-**Validations** :
-- Vérification de l'existence du marché
-- Contrôle de la date limite
-- Vérification du statut actif
 
 ### 2. Identification SIRET
 
@@ -100,6 +298,7 @@ end
 - Saisie du SIRET de l'entreprise (14 chiffres)
 - Validation en temps réel côté client
 - Prévention des caractères non numériques
+- Affichage des informations sur l'intégration plateforme
 
 **Validation côté client** :
 ```javascript
@@ -164,6 +363,7 @@ end
 - Upload des documents requis
 - Sauvegarde automatique (AJAX)
 - Indicateur de progression
+- Gestion des callbacks plateformes
 
 **Création automatique de l'application** :
 ```ruby
@@ -181,37 +381,7 @@ def find_or_create_application
 end
 ```
 
-### 5. Mise à jour du formulaire
-
-**Route** : `PATCH /candidate/:fast_track_id/form`
-
-**Sauvegarde automatique** :
-- Requêtes AJAX toutes les secondes après modification
-- Validation des données en temps réel
-- Gestion des uploads de fichiers
-- Retour JSON avec statut de succès
-
-**Contrôleur** :
-```ruby
-def update
-  application_params = params.require(:application).permit(
-    :company_name, :email, :phone, :contact_person,
-    document_uploads: {}
-  )
-
-  if @application.update(application_params)
-    handle_document_uploads if params[:application][:document_uploads]
-    render json: { success: true, message: 'Données sauvegardées' }
-  else
-    render json: {
-      success: false,
-      errors: @application.errors.full_messages
-    }, status: :unprocessable_entity
-  end
-end
-```
-
-### 6. Soumission de candidature
+### 5. Soumission de candidature
 
 **Route** : `POST /candidate/:fast_track_id/submit`
 
@@ -227,20 +397,50 @@ def submit
     result = Candidate::ApplicationSubmissionService.new(@application).submit!
     
     if result.success?
-      session[:application_id] = @application.id
-      redirect_to candidate_confirmation_path(fast_track_id: @public_market.fast_track_id)
+      handle_successful_submission
     else
-      flash[:error] = "Erreur lors de la soumission : #{result.error}"
-      redirect_to candidate_form_path(fast_track_id: @public_market.fast_track_id)
+      handle_submission_error(result.error)
     end
   else
     flash[:error] = 'Le formulaire n\'est pas complet.'
     redirect_to candidate_form_path(fast_track_id: @public_market.fast_track_id)
   end
 end
+
+private
+
+def handle_successful_submission
+  session[:application_id] = @application.id
+  
+  # Vérifier s'il y a un callback plateforme
+  if session[:platform_callback].present?
+    redirect_to_platform_callback
+  else
+    redirect_to candidate_confirmation_path(fast_track_id: @public_market.fast_track_id)
+  end
+end
+
+def redirect_to_platform_callback
+  callback_data = session[:platform_callback]
+  session.delete(:platform_callback)
+  
+  callback_url = URI.parse(callback_data[:url])
+  callback_params = {
+    submission_id: @application.submission_id,
+    siret: @application.siret,
+    status: 'submitted'
+  }
+  
+  # Ajouter le paramètre state s'il était fourni
+  callback_params[:state] = callback_data[:state] if callback_data[:state].present?
+  
+  callback_url.query = callback_params.to_query
+  
+  redirect_to callback_url.to_s, allow_other_host: true
+end
 ```
 
-### 7. Page de confirmation
+### 6. Page de confirmation
 
 **Route** : `GET /candidate/:fast_track_id/confirmation`
 
@@ -249,28 +449,42 @@ end
 - Récapitulatif du marché et de la candidature
 - Bouton de téléchargement de l'attestation (critique)
 - Instructions pour les étapes suivantes
+- Gestion des retours depuis les plateformes
 
-### 8. Téléchargement d'attestation
+### 7. Gestion des annulations
 
-**Route** : `GET /candidate/:fast_track_id/download`
+**Route** : `GET /candidate/:fast_track_id/cancel`
 
-**Sécurité** :
-- Vérification de l'existence de l'application
-- Contrôle du statut soumis
-- Validation de la session
+**Fonctionnalités** :
+- Annulation de la candidature en cours
+- Nettoyage des données de session
+- Redirection vers la plateforme avec statut 'cancelled'
 
 **Contrôleur** :
 ```ruby
-def download_attestation
-  @application = Application.find(session[:application_id])
-
-  if @application&.submitted? && @application.attestation_path
-    send_file @application.attestation_path,
-              filename: "attestation_#{@application.siret}_#{@public_market.fast_track_id}.pdf",
-              type: 'application/pdf',
-              disposition: 'attachment'
+def cancel
+  # Nettoyer les données de session
+  session.delete(:siret)
+  session.delete(:application_id)
+  
+  # Vérifier s'il y a un callback plateforme
+  if session[:platform_callback].present?
+    callback_data = session[:platform_callback]
+    session.delete(:platform_callback)
+    
+    callback_url = URI.parse(callback_data[:url])
+    callback_params = {
+      status: 'cancelled'
+    }
+    
+    callback_params[:state] = callback_data[:state] if callback_data[:state].present?
+    
+    callback_url.query = callback_params.to_query
+    
+    redirect_to callback_url.to_s, allow_other_host: true
   else
-    redirect_to candidate_error_path(error: 'attestation_not_available')
+    redirect_to candidate_entry_path(fast_track_id: @public_market.fast_track_id), 
+                notice: 'Candidature annulée'
   end
 end
 ```
@@ -287,6 +501,7 @@ module Candidate
 
     before_action :find_public_market
     before_action :validate_market_access
+    before_action :validate_callback_url
 
     private
 
@@ -313,6 +528,45 @@ module Candidate
       end
     end
 
+    def validate_callback_url
+      return unless params[:callback_url].present?
+      
+      begin
+        callback_uri = URI.parse(params[:callback_url])
+        
+        # Valider le domaine callback
+        unless valid_callback_domain?(callback_uri.host)
+          Rails.logger.warn "Invalid callback domain: #{callback_uri.host}"
+          redirect_to candidate_error_path(error: 'invalid_callback_url')
+          return
+        end
+        
+        # Valider le protocole (HTTPS en production)
+        if Rails.env.production? && callback_uri.scheme != 'https'
+          Rails.logger.warn "Invalid callback protocol: #{callback_uri.scheme}"
+          redirect_to candidate_error_path(error: 'invalid_callback_protocol')
+          return
+        end
+        
+      rescue URI::InvalidURIError
+        Rails.logger.warn "Invalid callback URL format: #{params[:callback_url]}"
+        redirect_to candidate_error_path(error: 'invalid_callback_url')
+      end
+    end
+
+    def valid_callback_domain?(domain)
+      return true if Rails.env.development? && domain.include?('localhost')
+      
+      # Liste des domaines autorisés en production
+      allowed_domains = [
+        'platform1.com',
+        'platform2.gouv.fr',
+        'procurement.fr'
+      ]
+      
+      allowed_domains.any? { |allowed| domain.ends_with?(allowed) }
+    end
+
     def current_application
       return unless @public_market && session[:siret]
       @current_application ||= @public_market.applications.find_by(siret: session[:siret])
@@ -326,88 +580,69 @@ module Candidate
 end
 ```
 
-### Actions de gestion des erreurs
-
-```ruby
-def error
-  @error_type = params[:error]
-  @error_message = error_message_for(@error_type)
-end
-
-private
-
-def error_message_for(error_type)
-  case error_type
-  when 'market_not_found'
-    'Le marché demandé n\'existe pas ou l\'ID Fast Track est invalide.'
-  when 'market_expired'
-    'La date limite de candidature pour ce marché est dépassée.'
-  when 'market_inactive'
-    'Ce marché n\'est plus disponible pour les candidatures.'
-  when 'already_submitted'
-    'Une candidature a déjà été soumise avec ce SIRET pour ce marché.'
-  when 'attestation_not_available'
-    'L\'attestation n\'est pas disponible ou la candidature n\'a pas été soumise.'
-  else
-    'Une erreur inattendue s\'est produite.'
-  end
-end
-```
-
-## Modèles et validations
-
-### Modèle Application
-
-```ruby
-# app/models/application.rb
-class Application < ApplicationRecord
-  belongs_to :public_market
-  has_many_attached :documents
-
-  validates :siret, presence: true, format: { with: /\A\d{14}\z/, message: 'must contain exactly 14 digits' }
-  validates :company_name, presence: true
-  validates :public_market_id, uniqueness: { scope: :siret, message: 'An application already exists for this SIRET on this market' }
-  validates :status, inclusion: { in: %w[in_progress submitted] }
-  validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }, if: :submitted?
-  validates :contact_person, presence: true, if: :submitted?
-
-  scope :submitted, -> { where(status: 'submitted') }
-  scope :in_progress, -> { where(status: 'in_progress') }
-
-  def submitted?
-    status == 'submitted'
-  end
-
-  def ready_for_submission?
-    form_complete? && in_progress?
-  end
-
-  def form_complete?
-    return false unless email.present? && contact_person.present?
-    all_required_documents_attached?
-  end
-
-  def all_required_documents_attached?
-    required_document_ids = public_market.public_market_configurations
-                                         .where(required: true)
-                                         .pluck(:document_id)
-
-    return true if required_document_ids.empty?
-
-    # Vérification simplifiée pour MVP
-    documents.attached? && required_document_ids.count <= documents.count
-  end
-
-  def formatted_siret
-    return unless siret.present?
-    siret.gsub(/(\d{3})(\d{3})(\d{3})(\d{5})/, '\1 \2 \3 \4')
-  end
-end
-```
-
 ## Services métier
 
-### Service de soumission
+### Service de callback plateforme
+
+```ruby
+# app/services/candidate/platform_callback_service.rb
+module Candidate
+  class PlatformCallbackService
+    attr_reader :application, :callback_data
+
+    def initialize(application, callback_data)
+      @application = application
+      @callback_data = callback_data
+    end
+
+    def build_callback_url(status = 'submitted')
+      return nil unless callback_data.present?
+      
+      callback_url = URI.parse(callback_data[:url])
+      
+      callback_params = {
+        submission_id: application.submission_id,
+        siret: application.siret,
+        status: status
+      }
+      
+      # Ajouter le paramètre state s'il était fourni
+      callback_params[:state] = callback_data[:state] if callback_data[:state].present?
+      
+      callback_url.query = callback_params.to_query
+      callback_url.to_s
+    end
+
+    def validate_callback_data
+      return true unless callback_data.present?
+      
+      url = callback_data[:url]
+      return false unless url.present?
+      
+      begin
+        uri = URI.parse(url)
+        return false unless %w[http https].include?(uri.scheme)
+        return false unless uri.host.present?
+        
+        true
+      rescue URI::InvalidURIError
+        false
+      end
+    end
+
+    def log_callback_attempt(status)
+      Rails.logger.info "Platform callback attempt: #{status}", {
+        application_id: application.id,
+        siret: application.siret,
+        callback_url: callback_data[:url],
+        status: status
+      }
+    end
+  end
+end
+```
+
+### Service de soumission amélioré
 
 ```ruby
 # app/services/candidate/application_submission_service.rb
@@ -425,12 +660,17 @@ module Candidate
         validate_submission!
         process_submission!
         generate_attestation!
-        notify_completion!
+        log_submission_success!
       end
 
       Result.success(application)
     rescue StandardError => e
-      Rails.logger.error "Application submission failed: #{e.message}"
+      Rails.logger.error "Application submission failed: #{e.message}", {
+        application_id: application.id,
+        siret: application.siret,
+        error: e.message,
+        backtrace: e.backtrace.first(5)
+      }
       Result.error(e.message)
     end
 
@@ -463,6 +703,48 @@ module Candidate
       application.update!(attestation_path: attestation_path)
     end
 
+    def log_submission_success!
+      Rails.logger.info "Application submitted successfully", {
+        application_id: application.id,
+        submission_id: application.submission_id,
+        siret: application.siret,
+        market_id: public_market.id,
+        fast_track_id: public_market.fast_track_id
+      }
+    end
+
+    def all_required_documents_present?
+      required_document_ids = public_market.public_market_configurations
+                                           .where(required: true)
+                                           .pluck(:document_id)
+
+      return true if required_document_ids.empty?
+
+      # Vérification que tous les documents requis sont attachés
+      attached_document_ids = application.documents.attachments
+                                        .joins(:blob)
+                                        .where('active_storage_blobs.filename LIKE ?', '%.pdf')
+                                        .pluck('SUBSTRING(active_storage_blobs.filename FROM \'^([0-9]+)_\')')
+                                        .map(&:to_i)
+
+      (required_document_ids - attached_document_ids).empty?
+    end
+
+    def create_application_zip!
+      # Créer un ZIP contenant tous les documents
+      zip_path = Rails.root.join('storage', 'applications', "#{application.submission_id}.zip")
+      FileUtils.mkdir_p(File.dirname(zip_path))
+
+      # Implémentation ZIP à ajouter selon les besoins
+      # Zip::File.open(zip_path, Zip::File::CREATE) do |zip|
+      #   application.documents.each do |document|
+      #     zip.add(document.filename.to_s, document.blob.service.path_for(document.blob.key))
+      #   end
+      # end
+
+      application.update!(dossier_zip_path: zip_path.to_s)
+    end
+
     class Result
       attr_reader :application, :error
 
@@ -491,75 +773,9 @@ module Candidate
 end
 ```
 
-### Service de génération PDF
-
-```ruby
-# app/services/candidate/attestation_pdf_service.rb
-module Candidate
-  class AttestationPdfService
-    attr_reader :application, :public_market
-
-    def initialize(application)
-      @application = application
-      @public_market = application.public_market
-    end
-
-    def generate!
-      pdf_content = generate_pdf_content
-      pdf_filename = "attestation_#{application.submission_id}.pdf"
-      pdf_path = Rails.root.join('storage', 'attestations', pdf_filename)
-
-      FileUtils.mkdir_p(File.dirname(pdf_path))
-      File.write(pdf_path, pdf_content)
-
-      pdf_path.to_s
-    end
-
-    private
-
-    def generate_pdf_content
-      # Contenu textuel pour MVP - remplacer par Prawn en production
-      header_section + market_section + candidate_section +
-        submission_section + documents_section + legal_section
-    end
-
-    def header_section
-      <<~HEADER
-        ATTESTATION DE DÉPÔT FAST TRACK
-        ================================
-
-      HEADER
-    end
-
-    def candidate_section
-      <<~CANDIDATE
-        CANDIDAT
-        --------
-        SIRET: #{application.siret}
-        Entreprise: #{application.company_name}
-        Email: #{application.email}
-        Contact: #{application.contact_person}
-
-      CANDIDATE
-    end
-
-    def submission_section
-      <<~SUBMISSION
-        SOUMISSION
-        ----------
-        ID de soumission: #{application.submission_id}
-        Date de soumission: #{application.submitted_at.strftime('%d/%m/%Y à %H:%M:%S')}
-        Délai limite: #{public_market.deadline.strftime('%d/%m/%Y à %H:%M:%S')}
-
-      SUBMISSION
-    end
-  end
-end
-```
-
 ## Vues et interface utilisateur
 
-### Layout candidat
+### Layout candidat avec support plateforme
 
 ```erb
 <!-- app/views/layouts/candidate.html.erb -->
@@ -582,6 +798,20 @@ end
         max-width: 800px;
         margin: 0 auto;
         padding: 2rem 1rem;
+      }
+      
+      .platform-integration-notice {
+        background: #e0f2fe;
+        border: 1px solid #0288d1;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 2rem;
+        color: #01579b;
+      }
+      
+      .platform-integration-notice h3 {
+        margin: 0 0 0.5rem 0;
+        color: #01579b;
       }
       
       .step-indicator {
@@ -616,6 +846,52 @@ end
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         overflow: hidden;
       }
+      
+      .actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+      }
+      
+      .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 0.375rem;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      
+      .btn-primary {
+        background-color: #3b82f6;
+        color: white;
+      }
+      
+      .btn-primary:hover {
+        background-color: #2563eb;
+      }
+      
+      .btn-secondary {
+        background-color: #6b7280;
+        color: white;
+      }
+      
+      .btn-secondary:hover {
+        background-color: #4b5563;
+      }
+      
+      .btn-outline {
+        background-color: transparent;
+        color: #3b82f6;
+        border: 2px solid #3b82f6;
+      }
+      
+      .btn-outline:hover {
+        background-color: #3b82f6;
+        color: white;
+      }
     </style>
   </head>
 
@@ -626,701 +902,478 @@ end
         <p class="subtitle">Candidature simplifiée aux marchés publics</p>
       </header>
 
+      <% if session[:platform_callback].present? %>
+        <div class="platform-integration-notice">
+          <h3>🔗 Intégration Plateforme</h3>
+          <p>Vous candidatez via votre plateforme d'achat. Une fois votre candidature terminée, vous serez automatiquement redirigé vers votre plateforme.</p>
+        </div>
+      <% end %>
+
       <main>
         <%= yield %>
       </main>
 
       <footer class="footer">
         <p>République Française - Fast Track</p>
+        <% if session[:platform_callback].present? %>
+          <div class="actions">
+            <%= link_to "Annuler et retourner à la plateforme", 
+                candidate_cancel_path(fast_track_id: params[:fast_track_id]), 
+                class: "btn btn-outline", 
+                method: :get,
+                confirm: "Êtes-vous sûr de vouloir annuler cette candidature ?" %>
+          </div>
+        <% end %>
       </footer>
     </div>
   </body>
 </html>
 ```
 
-### Formulaire de candidature avec JavaScript
+### Page d'entrée avec support plateforme
 
 ```erb
-<!-- app/views/candidate/applications/form.html.erb -->
-<%= form_with model: @application, url: candidate_update_path(fast_track_id: @public_market.fast_track_id), 
-    method: :patch, local: false, html: { id: 'candidate-form', multipart: true } do |form| %>
-  
-  <div class="form-group">
-    <%= form.label :email, "Adresse e-mail *", class: "form-label" %>
-    <%= form.email_field :email, 
-        class: "form-control", 
-        required: true,
-        data: { autosave: true } %>
+<!-- app/views/candidate/applications/entry.html.erb -->
+<% content_for :title, "Candidature - #{@public_market.titre}" %>
+
+<div class="candidate-card">
+  <div class="market-info">
+    <h2><%= @public_market.titre %></h2>
+    <p><%= @public_market.description %></p>
+    
+    <div class="market-details">
+      <p><strong>Type de marché :</strong> <%= @public_market.type_marche %></p>
+      <p><strong>Date limite :</strong> <%= @public_market.deadline.strftime('%d/%m/%Y à %H:%M') %></p>
+      <p><strong>Éditeur :</strong> <%= @public_market.editeur.nom %></p>
+    </div>
   </div>
 
-  <!-- Upload de documents -->
-  <% @document_requirements.select(&:required?).each do |config| %>
-    <div class="document-upload-item">
-      <strong><%= config.document.nom %></strong>
-      <%= form.file_field "document_uploads[#{config.document.id}]", 
-          class: "form-control",
-          accept: ".pdf",
-          data: { 
-            document_id: config.document.id,
-            required: true
-          } %>
-    </div>
-  <% end %>
-
-<% end %>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const form = document.getElementById('candidate-form');
-  
-  // Sauvegarde automatique
-  function autoSave() {
-    const formData = new FormData(form);
+  <div class="documents-required">
+    <h3>Documents requis</h3>
     
-    fetch(form.action, {
-      method: 'PATCH',
-      body: formData,
-      headers: {
-        'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content,
-        'X-Requested-With': 'XMLHttpRequest'
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        showSaveStatus();
-      }
-    });
+    <% if @document_requirements.any? %>
+      <ul class="documents-list">
+        <% @document_requirements.each do |config| %>
+          <li class="document-item">
+            <span class="document-name"><%= config.document.nom %></span>
+            <span class="document-status">
+              <% if config.required? %>
+                <span class="badge badge-required">Obligatoire</span>
+              <% else %>
+                <span class="badge badge-optional">Optionnel</span>
+              <% end %>
+            </span>
+            <% if config.document.description.present? %>
+              <p class="document-description"><%= config.document.description %></p>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p>Aucun document spécifique requis pour ce marché.</p>
+    <% end %>
+  </div>
+
+  <div class="actions">
+    <%= link_to "Commencer la candidature", 
+        candidate_siret_path(fast_track_id: @public_market.fast_track_id), 
+        class: "btn btn-primary" %>
+  </div>
+</div>
+
+<style>
+  .market-info {
+    padding: 2rem;
+    border-bottom: 1px solid #e5e7eb;
   }
-
-  // Sauvegarde après modification
-  document.querySelectorAll('[data-autosave="true"]').forEach(input => {
-    let timeout;
-    input.addEventListener('input', function() {
-      clearTimeout(timeout);
-      timeout = setTimeout(autoSave, 1000);
-    });
-  });
-
-  // Validation des fichiers PDF
-  document.querySelectorAll('input[type="file"]').forEach(input => {
-    input.addEventListener('change', function() {
-      const file = this.files[0];
-      if (file && file.type !== 'application/pdf') {
-        alert('Seuls les fichiers PDF sont acceptés');
-        this.value = '';
-      }
-    });
-  });
-});
-</script>
+  
+  .market-details {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #f3f4f6;
+  }
+  
+  .market-details p {
+    margin-bottom: 0.5rem;
+    color: #6b7280;
+  }
+  
+  .documents-required {
+    padding: 2rem;
+  }
+  
+  .documents-list {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .document-item {
+    padding: 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .document-name {
+    font-weight: 600;
+    color: #1f2937;
+  }
+  
+  .document-status {
+    float: right;
+  }
+  
+  .badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+  
+  .badge-required {
+    background-color: #fef2f2;
+    color: #dc2626;
+  }
+  
+  .badge-optional {
+    background-color: #f0f9ff;
+    color: #0369a1;
+  }
+  
+  .document-description {
+    margin-top: 0.5rem;
+    color: #6b7280;
+    font-size: 0.875rem;
+  }
+</style>
 ```
 
-## Gestion des sessions
+## Gestion des erreurs avec callback
 
-### Configuration sécurisée
-
-```ruby
-# config/application.rb
-config.session_store :cookie_store, 
-  key: '_voie_rapide_session',
-  secure: Rails.env.production?,
-  httponly: true,
-  same_site: :lax,
-  expire_after: 4.hours
-```
-
-### Gestion d'état candidat
+### Actions de gestion des erreurs
 
 ```ruby
-# Dans BaseController
-def clear_candidate_session
-  session.delete(:siret)
-  session.delete(:application_id)
-  session.delete(:fast_track_id)
+def error
+  @error_type = params[:error]
+  @error_message = error_message_for(@error_type)
+  @has_platform_callback = session[:platform_callback].present?
 end
 
-def ensure_session_consistency
-  # Vérifier la cohérence entre session et application
-  if session[:application_id] && session[:siret]
-    application = Application.find_by(id: session[:application_id])
-    if !application || application.siret != session[:siret]
-      clear_candidate_session
-      redirect_to candidate_siret_path(fast_track_id: @public_market.fast_track_id)
-    end
+private
+
+def error_message_for(error_type)
+  case error_type
+  when 'market_not_found'
+    'Le marché demandé n\'existe pas ou l\'ID Fast Track est invalide.'
+  when 'market_expired'
+    'La date limite de candidature pour ce marché est dépassée.'
+  when 'market_inactive'
+    'Ce marché n\'est plus disponible pour les candidatures.'
+  when 'already_submitted'
+    'Une candidature a déjà été soumise avec ce SIRET pour ce marché.'
+  when 'invalid_callback_url'
+    'L\'URL de callback fournie par la plateforme est invalide.'
+  when 'invalid_callback_protocol'
+    'Le protocole de callback doit être HTTPS en production.'
+  when 'attestation_not_available'
+    'L\'attestation n\'est pas disponible ou la candidature n\'a pas été soumise.'
+  else
+    'Une erreur inattendue s\'est produite.'
   end
 end
 ```
 
-## Upload et gestion des documents
+### Page d'erreur avec callback
 
-### Configuration Active Storage
+```erb
+<!-- app/views/candidate/applications/error.html.erb -->
+<% content_for :title, "Erreur - Fast Track" %>
 
-```ruby
-# config/storage.yml
-local:
-  service: Disk
-  root: <%= Rails.root.join("storage") %>
-
-# Dans application.rb
-config.active_storage.variant_processor = :mini_magick
-config.active_storage.max_file_size = 10.megabytes
-```
-
-### Validation des documents
-
-```ruby
-# Dans ApplicationsController
-def handle_document_uploads
-  document_uploads = params[:application][:document_uploads]
-
-  document_uploads.each do |document_id, file|
-    next unless file.present?
-
-    # Validation du type MIME
-    unless file.content_type == 'application/pdf'
-      flash[:error] = "Le fichier #{file.original_filename} n'est pas un PDF valide"
-      return
-    end
-
-    # Validation de la taille
-    if file.size > 10.megabytes
-      flash[:error] = "Le fichier #{file.original_filename} est trop volumineux (max 10 MB)"
-      return
-    end
-
-    document = Document.find(document_id)
-    @application.documents.attach(
-      io: file,
-      filename: "#{document.id}_#{@application.siret}.pdf",
-      content_type: 'application/pdf'
-    )
-  end
-end
-```
-
-### Nettoyage des fichiers temporaires
-
-```ruby
-# config/schedule.rb (avec gem whenever)
-every 1.day, at: '2:00 am' do
-  runner "CleanupTempFilesJob.perform_later"
-end
-
-# app/jobs/cleanup_temp_files_job.rb
-class CleanupTempFilesJob < ApplicationJob
-  def perform
-    # Supprimer les applications non soumises de plus de 24h
-    Application.where(status: 'in_progress')
-               .where('created_at < ?', 24.hours.ago)
-               .find_each do |app|
-      app.documents.purge
-      app.destroy
-    end
-  end
-end
-```
-
-## Génération des attestations PDF
-
-### Implémentation avec Prawn (recommandée pour production)
-
-```ruby
-# Gemfile
-gem 'prawn'
-gem 'prawn-table'
-
-# Service PDF amélioré
-module Candidate
-  class AttestationPdfService
-    def generate!
-      pdf_path = Rails.root.join('storage', 'attestations', pdf_filename)
-      FileUtils.mkdir_p(File.dirname(pdf_path))
-
-      Prawn::Document.generate(pdf_path) do |pdf|
-        generate_header(pdf)
-        generate_market_info(pdf)
-        generate_candidate_info(pdf)
-        generate_submission_info(pdf)
-        generate_documents_table(pdf)
-        generate_legal_footer(pdf)
-      end
-
-      pdf_path.to_s
-    end
-
-    private
-
-    def generate_header(pdf)
-      pdf.image "#{Rails.root}/app/assets/images/marianne.png", width: 60, height: 60
-      pdf.move_down 20
-      
-      pdf.font_size 18
-      pdf.text "ATTESTATION DE DÉPÔT", align: :center, style: :bold
-      pdf.text "FAST TRACK - RÉPUBLIQUE FRANÇAISE", align: :center
-      pdf.move_down 30
-    end
-
-    def generate_candidate_info(pdf)
-      pdf.font_size 12
-      
-      data = [
-        ["SIRET", application.siret],
-        ["Entreprise", application.company_name],
-        ["Email", application.email],
-        ["Contact", application.contact_person],
-        ["Téléphone", application.phone]
-      ]
-      
-      pdf.table(data, width: pdf.bounds.width) do
-        row(0).font_style = :bold
-        cells.border_width = 1
-        cells.padding = 8
-      end
-    end
-
-    def generate_documents_table(pdf)
-      headers = ["Document", "Statut", "Obligatoire"]
-      rows = [headers]
-      
-      required_docs = public_market.public_market_configurations
-                                   .includes(:document)
-                                   .order('required DESC, documents.nom ASC')
-      
-      required_docs.each do |config|
-        status = document_attached?(config.document) ? "✓ Fourni" : "✗ Manquant"
-        required = config.required? ? "Oui" : "Non"
-        rows << [config.document.nom, status, required]
-      end
-      
-      pdf.table(rows, header: true, width: pdf.bounds.width)
-    end
-  end
-end
-```
-
-### Configuration pour différents environnements
-
-```ruby
-# config/environments/production.rb
-config.active_storage.service = :amazon
-
-# config/storage.yml
-amazon:
-  service: S3
-  access_key_id: <%= Rails.application.credentials.dig(:aws, :access_key_id) %>
-  secret_access_key: <%= Rails.application.credentials.dig(:aws, :secret_access_key) %>
-  region: eu-west-1
-  bucket: fast-track-attestations-prod
-```
-
-## Gestion des erreurs
-
-### Hiérarchie d'erreurs personnalisées
-
-```ruby
-# app/errors/candidate_errors.rb
-module CandidateErrors
-  class BaseError < StandardError; end
-  class MarketNotFound < BaseError; end
-  class MarketExpired < BaseError; end
-  class MarketInactive < BaseError; end
-  class ApplicationAlreadySubmitted < BaseError; end
-  class InvalidSiret < BaseError; end
-  class DocumentValidationError < BaseError; end
-end
-```
-
-### Gestionnaire d'erreurs global
-
-```ruby
-# app/controllers/application_controller.rb
-class ApplicationController < ActionController::Base
-  rescue_from CandidateErrors::MarketNotFound, with: :handle_market_not_found
-  rescue_from CandidateErrors::MarketExpired, with: :handle_market_expired
-  rescue_from CandidateErrors::ApplicationAlreadySubmitted, with: :handle_already_submitted
-
-  private
-
-  def handle_market_not_found
-    redirect_to candidate_error_path(error: 'market_not_found')
-  end
-
-  def handle_market_expired
-    redirect_to candidate_error_path(error: 'market_expired')
-  end
-
-  def handle_already_submitted
-    redirect_to candidate_error_path(error: 'already_submitted')
-  end
-end
-```
-
-### Logging et monitoring
-
-```ruby
-# config/environments/production.rb
-config.log_level = :info
-
-# Dans les services
-class ApplicationSubmissionService
-  def submit!
-    Rails.logger.info "Starting application submission for SIRET: #{application.siret}"
+<div class="candidate-card">
+  <div class="error-content">
+    <h2>❌ Erreur</h2>
+    <p><%= @error_message %></p>
     
-    # ... logique de soumission
-    
-    Rails.logger.info "Application submitted successfully: #{application.submission_id}"
-  rescue StandardError => e
-    Rails.logger.error "Application submission failed: #{e.message}"
-    Rails.logger.error e.backtrace.join("\n")
-    raise
-  end
-end
+    <% if @has_platform_callback %>
+      <div class="platform-error-actions">
+        <p>Vous pouvez retourner à votre plateforme ou réessayer.</p>
+        <div class="actions">
+          <%= link_to "Retourner à la plateforme", 
+              candidate_cancel_path(fast_track_id: params[:fast_track_id]), 
+              class: "btn btn-secondary" %>
+          <%= link_to "Réessayer", 
+              candidate_entry_path(fast_track_id: params[:fast_track_id]), 
+              class: "btn btn-primary" %>
+        </div>
+      </div>
+    <% else %>
+      <div class="actions">
+        <%= link_to "Retourner à l'accueil", 
+            candidate_entry_path(fast_track_id: params[:fast_track_id]), 
+            class: "btn btn-primary" %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<style>
+  .error-content {
+    padding: 3rem;
+    text-align: center;
+  }
+  
+  .error-content h2 {
+    color: #dc2626;
+    margin-bottom: 1rem;
+  }
+  
+  .error-content p {
+    color: #6b7280;
+    margin-bottom: 2rem;
+  }
+  
+  .platform-error-actions {
+    margin-top: 2rem;
+  }
+  
+  .platform-error-actions p {
+    margin-bottom: 1rem;
+  }
+</style>
 ```
 
-## Tests et validation
-
-### Tests d'intégration complets
+## Routes avec callback
 
 ```ruby
-# spec/requests/candidate/candidate_flow_spec.rb
-RSpec.describe 'Candidate Flow', type: :request do
-  let(:editor) { create(:editor, :authorized_and_active) }
-  let(:public_market) { create(:public_market, editor: editor) }
-  let(:document) { create(:document, :obligatoire) }
-  let!(:configuration) { create(:public_market_configuration, public_market: public_market, document: document) }
-
-  describe 'Complete candidate flow' do
-    it 'allows a candidate to go through the entire application process' do
-      # Test du flux complet
-      get candidate_entry_path(fast_track_id: public_market.fast_track_id)
-      expect(response).to have_http_status(:success)
-
-      post candidate_validate_siret_path(fast_track_id: public_market.fast_track_id), 
-           params: { siret: '12345678901234' }
-      expect(response).to redirect_to(candidate_form_path(fast_track_id: public_market.fast_track_id))
-
-      # ... autres étapes du test
-    end
-  end
-
-  describe 'Error handling' do
-    it 'handles expired markets' do
-      public_market.update!(deadline: 1.day.ago)
-      get candidate_entry_path(fast_track_id: public_market.fast_track_id)
-      expect(response).to redirect_to(candidate_error_path(error: 'market_expired'))
-    end
-  end
-end
-```
-
-### Tests unitaires des services
-
-```ruby
-# spec/services/candidate/application_submission_service_spec.rb
-RSpec.describe Candidate::ApplicationSubmissionService do
-  let(:application) { create(:application, :with_required_documents) }
-  let(:service) { described_class.new(application) }
-
-  describe '#submit!' do
-    context 'when application is valid' do
-      it 'submits successfully' do
-        result = service.submit!
-        
-        expect(result.success?).to be true
-        expect(application.reload.status).to eq('submitted')
-        expect(application.submission_id).to be_present
-        expect(application.attestation_path).to be_present
-      end
-    end
-
-    context 'when market deadline is passed' do
-      before { application.public_market.update!(deadline: 1.day.ago) }
-
-      it 'fails with appropriate error' do
-        result = service.submit!
-        expect(result.success?).to be false
-        expect(result.error).to include('deadline passed')
-      end
-    end
-  end
-end
-```
-
-### Tests JavaScript avec Capybara
-
-```ruby
-# spec/system/candidate_application_spec.rb
-RSpec.describe 'Candidate Application', type: :system, js: true do
-  let(:public_market) { create(:public_market, :with_documents) }
-
-  it 'provides real-time form validation' do
-    visit candidate_siret_path(fast_track_id: public_market.fast_track_id)
-    
-    fill_in 'SIRET', with: '1234567890123'
-    expect(find('#submit-siret')).to be_disabled
-    
-    fill_in 'SIRET', with: '12345678901234'
-    expect(find('#submit-siret')).not_to be_disabled
-  end
-
-  it 'auto-saves form data' do
-    # Navigation jusqu'au formulaire
-    visit candidate_form_path(fast_track_id: public_market.fast_track_id)
-    
-    fill_in 'Email', with: 'test@example.com'
-    
-    # Attendre la sauvegarde automatique
-    expect(page).to have_content('Données sauvegardées')
+# config/routes.rb
+Rails.application.routes.draw do
+  # Candidate routes
+  scope :candidate do
+    get ':fast_track_id', to: 'candidate/applications#entry', as: :candidate_entry
+    get ':fast_track_id/siret', to: 'candidate/applications#siret', as: :candidate_siret
+    post ':fast_track_id/siret', to: 'candidate/applications#validate_siret', as: :candidate_validate_siret
+    get ':fast_track_id/form', to: 'candidate/applications#form', as: :candidate_form
+    patch ':fast_track_id/form', to: 'candidate/applications#update', as: :candidate_update
+    post ':fast_track_id/submit', to: 'candidate/applications#submit', as: :candidate_submit
+    get ':fast_track_id/confirmation', to: 'candidate/applications#confirmation', as: :candidate_confirmation
+    get ':fast_track_id/download', to: 'candidate/applications#download_attestation', as: :candidate_download
+    get ':fast_track_id/cancel', to: 'candidate/applications#cancel', as: :candidate_cancel
+    get ':fast_track_id/error', to: 'candidate/applications#error', as: :candidate_error
   end
 end
 ```
 
 ## Sécurité et conformité
 
-### Protection CSRF
+### Validation des callbacks
 
 ```ruby
-# app/controllers/application_controller.rb
-class ApplicationController < ActionController::Base
-  protect_from_forgery with: :exception
-  
-  # Pour les requêtes AJAX
-  before_action :set_csrf_token_header
+# app/services/candidate/callback_validator.rb
+module Candidate
+  class CallbackValidator
+    ALLOWED_DOMAINS = [
+      'localhost',
+      'platform1.com',
+      'platform2.gouv.fr',
+      'procurement.fr'
+    ].freeze
 
-  private
+    def self.valid_callback_url?(url)
+      return false unless url.present?
 
-  def set_csrf_token_header
-    response.headers['X-CSRF-Token'] = form_authenticity_token
-  end
-end
-```
+      begin
+        uri = URI.parse(url)
+        
+        # Vérifier le protocole
+        return false unless %w[http https].include?(uri.scheme)
+        
+        # HTTPS obligatoire en production
+        return false if Rails.env.production? && uri.scheme != 'https'
+        
+        # Vérifier le domaine
+        return false unless valid_domain?(uri.host)
+        
+        # Vérifier la longueur
+        return false if url.length > 2000
+        
+        true
+      rescue URI::InvalidURIError
+        false
+      end
+    end
 
-### Validation des entrées
+    def self.valid_domain?(host)
+      return false unless host.present?
+      
+      # Permettre localhost en développement
+      return true if Rails.env.development? && host.include?('localhost')
+      
+      # Vérifier les domaines autorisés
+      ALLOWED_DOMAINS.any? { |domain| host.ends_with?(domain) }
+    end
 
-```ruby
-# Strong parameters stricts
-def application_params
-  params.require(:application).permit(
-    :email, :phone, :contact_person,
-    document_uploads: {}
-  ).tap do |permitted|
-    # Validation supplémentaire
-    if permitted[:email] && !permitted[:email].match?(URI::MailTo::EMAIL_REGEXP)
-      raise ActionController::ParameterMissing, 'Invalid email format'
+    def self.sanitize_callback_params(params)
+      sanitized = {}
+      
+      allowed_params = %w[submission_id siret status state]
+      
+      allowed_params.each do |param|
+        value = params[param]
+        next unless value.present?
+        
+        # Nettoyer et valider
+        sanitized[param] = value.to_s.strip[0..255]
+      end
+      
+      sanitized
     end
   end
 end
 ```
 
-### Limitation du taux de requêtes
+### Logging et audit
 
 ```ruby
-# Gemfile
-gem 'rack-attack'
-
-# config/initializers/rack_attack.rb
-Rack::Attack.throttle('candidate_submissions', limit: 3, period: 1.hour) do |req|
-  if req.path.include?('/candidate/') && req.post?
-    req.ip
-  end
-end
-
-Rack::Attack.throttle('candidate_form_updates', limit: 30, period: 5.minutes) do |req|
-  if req.path.include?('/form') && req.patch?
-    req.ip
-  end
-end
-```
-
-### Audit et traçabilité
-
-```ruby
-# app/models/application.rb
-class Application < ApplicationRecord
-  after_create :log_creation
-  after_update :log_updates, if: :saved_change_to_status?
-
-  private
-
-  def log_creation
-    Rails.logger.info "Application created: SIRET=#{siret}, Market=#{public_market.fast_track_id}"
-  end
-
-  def log_updates
-    if status == 'submitted'
-      Rails.logger.info "Application submitted: ID=#{submission_id}, SIRET=#{siret}"
-    end
-  end
-end
-```
-
-## Déploiement et monitoring
-
-### Configuration Docker
-
-```dockerfile
-# Dockerfile
-FROM ruby:3.2.0-alpine
-
-# Dépendances système pour génération PDF
-RUN apk add --no-cache \
-  build-base \
-  postgresql-dev \
-  imagemagick \
-  imagemagick-dev
-
-WORKDIR /app
-
-COPY Gemfile Gemfile.lock ./
-RUN bundle install --deployment --without development test
-
-COPY . .
-
-# Compilation des assets
-RUN RAILS_ENV=production bundle exec rake assets:precompile
-
-EXPOSE 3000
-
-CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]
-```
-
-### Monitoring avec Prometheus
-
-```ruby
-# Gemfile
-gem 'prometheus_exporter'
-
-# config/initializers/prometheus.rb
-unless Rails.env.test?
-  require 'prometheus_exporter/middleware'
+# app/models/candidate_audit_log.rb
+class CandidateAuditLog < ApplicationRecord
+  validates :action, :siret, :fast_track_id, presence: true
   
-  # Métriques personnalisées
-  PrometheusExporter::Server::TypeCollector.new.tap do |collector|
-    collector.observe(
-      'candidate_applications_total',
-      'Total candidate applications',
-      type: 'counter'
+  scope :recent, -> { where('created_at > ?', 7.days.ago) }
+  scope :by_action, ->(action) { where(action: action) }
+  
+  def self.log_action(action, params = {})
+    create!(
+      action: action,
+      siret: params[:siret],
+      fast_track_id: params[:fast_track_id],
+      ip_address: params[:ip_address],
+      user_agent: params[:user_agent],
+      additional_data: params[:additional_data]&.to_json
     )
   end
 end
 ```
 
-### Configuration nginx
+## Tests avec intégration plateforme
 
-```nginx
-# /etc/nginx/sites-available/fast-track
-upstream fast_track {
-  server 127.0.0.1:3000;
-}
-
-server {
-  listen 80;
-  server_name fast-track.gouv.fr;
-  
-  # Redirection HTTPS obligatoire
-  return 301 https://$server_name$request_uri;
-}
-
-server {
-  listen 443 ssl http2;
-  server_name fast-track.gouv.fr;
-  
-  ssl_certificate /etc/ssl/certs/fast-track.crt;
-  ssl_certificate_key /etc/ssl/private/fast-track.key;
-  
-  # Sécurité
-  add_header X-Frame-Options SAMEORIGIN;
-  add_header X-Content-Type-Options nosniff;
-  add_header X-XSS-Protection "1; mode=block";
-  
-  # Upload de fichiers
-  client_max_body_size 10M;
-  
-  location / {
-    proxy_pass http://fast_track;
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-  }
-  
-  # Cache des assets
-  location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg)$ {
-    expires 1y;
-    add_header Cache-Control "public, immutable";
-    proxy_pass http://fast_track;
-  }
-}
-```
-
-### Sauvegarde et récupération
-
-```bash
-#!/bin/bash
-# scripts/backup.sh
-
-# Sauvegarde base de données
-pg_dump fast_track_production > /backups/db_$(date +%Y%m%d_%H%M%S).sql
-
-# Sauvegarde des fichiers uploadés
-tar -czf /backups/storage_$(date +%Y%m%d_%H%M%S).tar.gz storage/
-
-# Nettoyage des anciennes sauvegardes (garde 30 jours)
-find /backups -name "*.sql" -mtime +30 -delete
-find /backups -name "*.tar.gz" -mtime +30 -delete
-```
-
-## Performance et optimisation
-
-### Mise en cache
+### Tests d'intégration
 
 ```ruby
-# app/controllers/candidate/applications_controller.rb
-def entry
-  @document_requirements = Rails.cache.fetch(
-    "market_documents_#{@public_market.id}_#{@public_market.updated_at.to_i}",
-    expires_in: 1.hour
-  ) do
-    @public_market.public_market_configurations
-                  .includes(:document)
-                  .order('documents.obligatoire DESC, documents.nom ASC')
+# spec/requests/candidate/platform_integration_spec.rb
+RSpec.describe 'Candidate Platform Integration', type: :request do
+  let(:public_market) { create(:public_market) }
+  let(:callback_url) { 'https://platform.com/callback' }
+  let(:state) { 'secure_random_state' }
+
+  describe 'Platform callback flow' do
+    it 'redirects to platform after successful submission' do
+      # Démarrer avec callback URL
+      get candidate_entry_path(public_market.fast_track_id, 
+                              callback_url: callback_url, 
+                              state: state)
+      
+      expect(response).to have_http_status(:success)
+      expect(session[:platform_callback]).to be_present
+      
+      # Compléter la candidature
+      complete_candidate_application(public_market)
+      
+      # Vérifier la redirection
+      expect(response).to redirect_to(/#{callback_url}/)
+      
+      redirect_url = URI.parse(response.location)
+      params = CGI.parse(redirect_url.query)
+      
+      expect(params['status']).to eq(['submitted'])
+      expect(params['state']).to eq([state])
+      expect(params['submission_id']).to be_present
+    end
+    
+    it 'handles cancellation with platform callback' do
+      # Configurer la session avec callback
+      get candidate_entry_path(public_market.fast_track_id, 
+                              callback_url: callback_url, 
+                              state: state)
+      
+      # Annuler
+      get candidate_cancel_path(public_market.fast_track_id)
+      
+      expect(response).to redirect_to(/#{callback_url}/)
+      
+      redirect_url = URI.parse(response.location)
+      params = CGI.parse(redirect_url.query)
+      
+      expect(params['status']).to eq(['cancelled'])
+      expect(params['state']).to eq([state])
+    end
+  end
+  
+  describe 'Callback URL validation' do
+    it 'rejects invalid callback URLs' do
+      invalid_url = 'http://malicious-site.com/callback'
+      
+      get candidate_entry_path(public_market.fast_track_id, 
+                              callback_url: invalid_url)
+      
+      expect(response).to redirect_to(candidate_error_path(error: 'invalid_callback_url'))
+    end
+    
+    it 'requires HTTPS in production' do
+      allow(Rails.env).to receive(:production?).and_return(true)
+      
+      http_url = 'http://platform.com/callback'
+      
+      get candidate_entry_path(public_market.fast_track_id, 
+                              callback_url: http_url)
+      
+      expect(response).to redirect_to(candidate_error_path(error: 'invalid_callback_protocol'))
+    end
+  end
+  
+  private
+  
+  def complete_candidate_application(market)
+    # Valider SIRET
+    post candidate_validate_siret_path(market.fast_track_id), 
+         params: { siret: '12345678901234' }
+    
+    # Remplir formulaire
+    patch candidate_update_path(market.fast_track_id), 
+          params: { 
+            application: {
+              email: 'test@example.com',
+              contact_person: 'John Doe',
+              phone: '0123456789'
+            }
+          }
+    
+    # Soumettre
+    post candidate_submit_path(market.fast_track_id)
   end
 end
 ```
 
-### Optimisation des requêtes
-
-```ruby
-# Éviter N+1
-def index
-  @applications = @public_market.applications
-                                .includes(:documents)
-                                .joins(:public_market)
-                                .order(created_at: :desc)
-end
-```
-
-### Compression et CDN
-
-```ruby
-# config/environments/production.rb
-config.asset_host = 'https://cdn.fast-track.gouv.fr'
-config.assets.compress = true
-config.assets.js_compressor = :terser
-config.assets.css_compressor = :sass
-```
-
 ## Conclusion
 
-Ce guide présente une implémentation complète et robuste du flux candidat Fast Track, couvrant tous les aspects techniques, sécuritaires et de conformité nécessaires pour un déploiement en production dans l'administration française.
+Cette implémentation du flux candidat avec intégration plateforme offre :
 
-### Points clés à retenir
+### Avantages clés
+- **Flexibilité** : Support à la fois de l'accès direct et de l'intégration plateforme
+- **Sécurité** : Validation stricte des callbacks et protection CSRF
+- **Simplicité** : Flux de redirection standard sans complexité iframe
+- **Audit** : Logging complet pour conformité et débogage
+- **Expérience utilisateur** : Interface cohérente avec ou sans plateforme
 
-1. **Sécurité d'abord** : Validation stricte, protection CSRF, limitation des taux
-2. **Expérience utilisateur** : Interface intuitive, sauvegarde automatique, gestion d'erreurs
-3. **Conformité** : Respect des standards gouvernementaux, audit, traçabilité
-4. **Performance** : Mise en cache, optimisation des requêtes, monitoring
-5. **Maintenabilité** : Tests complets, documentation, déploiement automatisé
+### Sécurité
+- Validation des domaines de callback
+- Protection CSRF avec paramètres d'état
+- Logging complet des actions
+- Validation stricte des entrées
 
-L'implémentation respecte les contraintes techniques françaises et fournit une base solide pour l'évolution future du système.
+### Intégration
+- Support transparent des plateformes
+- Callbacks sécurisés avec validation
+- Gestion d'erreurs robuste
+- Documentation complète pour les développeurs
+
+Cette approche permet une intégration transparente avec les plateformes d'achat tout en maintenant la sécurité et la simplicité du flux candidat.

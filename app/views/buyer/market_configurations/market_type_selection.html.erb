@@ -26,10 +26,10 @@
   </div>
 
   <!-- Market Type Selection Form -->
-  <%= form_with model: @market_configuration, 
-                url: documents_buyer_market_configurations_path, 
+  <%= form_with url: documents_buyer_market_configurations_path, 
                 method: :get,
                 local: true,
+                scope: :market_configuration,
                 data: { controller: "form-validation" } do |form| %>
     
     <div class="form-group">
@@ -91,32 +91,3 @@
   </div>
 </div>
 
-<script type="application/javascript" data-turbo-eval="false">
-  // Stimulus controller for market type selection
-  Stimulus.register("market-type-selection", class extends Stimulus.Controller {
-    selectType(event) {
-      // Visual feedback for label selection
-      const label = event.currentTarget;
-      const radio = label.querySelector('input[type="radio"]');
-      if (radio) {
-        radio.checked = true;
-        this.updateSelection({ target: radio });
-      }
-    }
-    
-    updateSelection(event) {
-      // Update visual state of all options
-      const allLabels = this.element.querySelectorAll('label[data-action*="selectType"]');
-      allLabels.forEach(label => {
-        const radio = label.querySelector('input[type="radio"]');
-        if (radio.checked) {
-          label.style.borderColor = '#2563eb';
-          label.style.backgroundColor = '#eff6ff';
-        } else {
-          label.style.borderColor = '#e5e7eb';
-          label.style.backgroundColor = 'transparent';
-        }
-      });
-    }
-  });
-</script>

@@ -13,7 +13,7 @@ class PublicMarket < ApplicationRecord
 
   scope :active, -> { where(active: true) }
   scope :open, -> { where('deadline > ?', Time.current) }
-  scope :closed, -> { where('deadline <= ?', Time.current) }
+  scope :closed, -> { where(deadline: ..Time.current) }
 
   before_validation :generate_fast_track_id, on: :create
 

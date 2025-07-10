@@ -1,6 +1,10 @@
 <% content_for :title, "Configuration terminée - Fast Track" %>
 
-<div data-controller="confirmation">
+<div data-controller="confirmation"
+     data-confirmation-fast-track-id-value="<%= @public_market.fast_track_id %>"
+     data-confirmation-market-title-value="<%= @public_market.title %>"
+     data-confirmation-deadline-value="<%= @public_market.deadline.iso8601 %>"
+     data-confirmation-documents-count-value="<%= @document_requirements.count %>">
   <!-- Step Indicator -->
   <ol class="step-indicator">
     <li class="completed">Type de marché</li>
@@ -158,43 +162,80 @@
 
   <!-- Actions -->
   <div style="text-align: center;">
-    <button type="button" 
-            onclick="window.close()" 
-            class="btn btn-primary"
-            style="min-width: 200px;">
-      Terminer
-    </button>
+    <% callback_data = session[:platform_callback] %>
+    
+    <!-- Debug session data -->
+    <div style="background: #f0f0f0; padding: 1rem; margin: 1rem 0; font-size: 0.8rem; border-radius: 4px;">
+      <strong>Session Debug Info:</strong><br>
+      callback_data: <%= callback_data.inspect %><br>
+      callback_data present: <%= callback_data.present? %><br>
+      callback_data url: <%= callback_data&.dig('url').inspect %><br>
+      Session keys: <%= session.keys.inspect %><br>
+      Session ID: <%= session.id %>
+    </div>
+    
+    <% if callback_data&.dig('url').present? %>
+      <form method="get" action="<%= callback_data['url'] %>" style="display: inline;" data-turbo="false">
+        <input type="hidden" name="fast_track_id" value="<%= @public_market.fast_track_id %>">
+        <input type="hidden" name="market_title" value="<%= @public_market.title %>">
+        <input type="hidden" name="deadline" value="<%= @public_market.deadline&.iso8601 %>">
+        <input type="hidden" name="documents_count" value="<%= @document_requirements.count %>">
+        <% if callback_data['state'].present? %>
+          <input type="hidden" name="state" value="<%= callback_data['state'] %>">
+        <% end %>
+        <button type="submit" class="btn btn-primary" style="min-width: 200px;"
+                onclick="console.log('Submitting callback to:', '<%= callback_data['url'] %>'); 
+                         console.log('Form data:', { fast_track_id: '<%= @public_market.fast_track_id %>', state: '<%= callback_data['state'] %>' });
+                         return true;">
+          Retour à la plateforme
+        </button>
+      </form>
+      
+      <script>
+        // Debug: Log callback data to console
+        console.log('Fast Track callback will be sent to:', '<%= callback_data['url'] %>');
+        console.log('Fast Track ID:', '<%= @public_market.fast_track_id %>');
+        console.log('State parameter:', '<%= callback_data['state'] %>');
+      </script>
+      
+      <!-- Debug info (remove in production) -->
+      <div style="background: #f0f0f0; padding: 1rem; margin-top: 1rem; font-size: 0.8rem; border-radius: 4px;">
+        <strong>Debug Info:</strong><br>
+        Callback URL: <%= callback_data['url'] %><br>
+        State: <%= callback_data['state'] %>
+      </div>
+    <% else %>
+      <button type="button" 
+              onclick="handleReturnToPlatform()" 
+              class="btn btn-primary"
+              style="min-width: 200px;">
+        Retour à la plateforme
+      </button>
+      
+      <script>
+        function handleReturnToPlatform() {
+          // No callback data available, try to close or redirect to editor
+          try {
+            // First, try to close the window (works if opened by script)
+            window.close();
+            
+            // If we're still here after a brief delay, the close didn't work
+            setTimeout(function() {
+              if (!window.closed) {
+                // Redirect to the editor app's main page as fallback
+                window.location.href = '<%= ENV.fetch("EDITOR_BASE_URL", "http://localhost:4000") %>';
+              }
+            }, 100);
+          } catch (e) {
+            // If close() throws an error, redirect immediately
+            window.location.href = '<%= ENV.fetch("EDITOR_BASE_URL", "http://localhost:4000") %>';
+          }
+        }
+      </script>
+    <% end %>
     <div class="text-sm" style="margin-top: 1rem; color: #6b7280;">
-      Cette fenêtre va se fermer automatiquement
+      Configuration terminée avec succès
     </div>
   </div>
 </div>
 
-<script type="application/javascript" data-turbo-eval="false">
-  // Stimulus controller for confirmation page
-  Stimulus.register("confirmation", class extends Stimulus.Controller {
-    connect() {
-      // Notify parent window of successful completion
-      this.notifyParent({
-        type: 'fasttrack:completed',
-        fastTrackId: '<%= @public_market.fast_track_id %>',
-        marketTitle: '<%= j @public_market.title %>',
-        deadline: '<%= @public_market.deadline.iso8601 %>',
-        documentsCount: <%= @document_requirements.count %>
-      });
-      
-      // Auto-close after 30 seconds if not manually closed
-      setTimeout(() => {
-        if (confirm('Fermer automatiquement cette fenêtre ?')) {
-          window.close();
-        }
-      }, 30000);
-    }
-    
-    notifyParent(data) {
-      if (window.parent && window.parent !== window) {
-        window.parent.postMessage(data, '*');
-      }
-    }
-  });
-</script>

@@ -10,7 +10,7 @@ class MarketConfigurationSession
   attribute :description, :string
   attribute :deadline, :datetime
   attribute :market_type, :string
-  attribute :optional_document_ids, array: true, default: []
+  attribute :optional_document_ids, array: true, default: -> { [] }
 
   validates :title, presence: true, length: { minimum: 3, maximum: 255 }
   validates :description, presence: true, length: { minimum: 10, maximum: 2000 }
@@ -64,7 +64,7 @@ class MarketConfigurationSession
   private
 
   def deadline_must_be_future
-    return unless deadline.present?
+    return if deadline.blank?
 
     return unless deadline <= 1.hour.from_now
 

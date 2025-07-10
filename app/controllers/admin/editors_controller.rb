@@ -16,6 +16,8 @@ module Admin
       @editor = Editor.new
     end
 
+    def edit; end
+
     def create
       @editor = Editor.new(editor_params)
 
@@ -25,18 +27,16 @@ module Admin
 
       if @editor.save
         @editor.sync_to_doorkeeper!
-        redirect_to admin_editor_path(@editor), notice: 'Éditeur créé avec succès.'
+        redirect_to admin_editor_path(@editor), notice: I18n.t('admin.editors.created')
       else
         render :new, status: :unprocessable_entity
       end
     end
 
-    def edit; end
-
     def update
       if @editor.update(editor_params)
         @editor.sync_to_doorkeeper!
-        redirect_to admin_editor_path(@editor), notice: 'Éditeur mis à jour avec succès.'
+        redirect_to admin_editor_path(@editor), notice: I18n.t('admin.editors.updated')
       else
         render :edit, status: :unprocessable_entity
       end
@@ -44,12 +44,12 @@ module Admin
 
     def destroy
       @editor.destroy!
-      redirect_to admin_editors_path, notice: 'Éditeur supprimé avec succès.'
+      redirect_to admin_editors_path, notice: I18n.t('admin.editors.deleted')
     end
 
     def sync_doorkeeper
       @editor.sync_to_doorkeeper!
-      redirect_to admin_editor_path(@editor), notice: 'Application Doorkeeper synchronisée.'
+      redirect_to admin_editor_path(@editor), notice: I18n.t('admin.editors.doorkeeper_synced')
     end
 
     private
@@ -59,7 +59,7 @@ module Admin
     end
 
     def editor_params
-      params.require(:editor).permit(:name, :callback_url, :authorized, :active)
+      params.expect(editor: %i[name callback_url authorized active])
     end
   end
 end

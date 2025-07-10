@@ -49,7 +49,7 @@ RSpec.describe 'Candidate Flow', type: :request do
       }, headers: { 'HTTP_X_REQUESTED_WITH' => 'XMLHttpRequest' }
 
       expect(response).to have_http_status(:success)
-      expect(JSON.parse(response.body)['success']).to be true
+      expect(response.parsed_body['success']).to be true
 
       application.reload
       expect(application.email).to eq('test@example.com')

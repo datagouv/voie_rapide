@@ -1,7 +1,7 @@
 # Fast Track Editor Integration - Complete Implementation Guide
 
-**Version**: 1.0  
-**Date**: 07/07/2025  
+**Version**: 2.0  
+**Date**: 09/07/2025  
 **Audience**: Procurement platform developers integrating with Fast Track
 
 ## 📋 Table of Contents
@@ -13,7 +13,7 @@
 5. [Node.js/Express Implementation](#nodejs-express-implementation)
 6. [Rails Implementation](#rails-implementation)
 7. [Frontend Integration](#frontend-integration)
-8. [PostMessage Communication](#postmessage-communication)
+8. [Redirect Flow Communication](#redirect-flow-communication)
 9. [Security Considerations](#security-considerations)
 10. [Testing & Debugging](#testing--debugging)
 11. [Production Deployment](#production-deployment)
@@ -44,23 +44,24 @@
          │ 4. Access Token       │                       │
          │←──────────────────────┤                       │
          │                       │                       │
-         │ 5. Open iFrame/Popup   │ 6. Configure Market  │
+         │ 5. Redirect to Fast    │ 6. Configure Market  │
+         │    Track with callback │ in full browser      │
          ├──────────────────────→├──────────────────────→│
          │                       │                       │
-         │ 7. PostMessage with    │ 8. Market Configured  │
-         │    Fast Track ID       │←──────────────────────┤
+         │ 7. Callback redirect   │ 8. Market Configured  │
+         │    with Fast Track ID  │←──────────────────────┤
          │←──────────────────────┤                       │
          │                       │                       │
          │ 9. Store Fast Track ID │                       │
-         │   & Close Integration  │                       │
+         │   & Show confirmation  │                       │
          └─────────────────────────────────────────────────
 ```
 
 ### Key Components
 
 1. **OAuth2 Client**: Handles authentication with Fast Track
-2. **iFrame/Popup Manager**: Manages embedded Fast Track interface
-3. **Message Handler**: Processes PostMessage communications
+2. **Redirect Manager**: Manages navigation to/from Fast Track
+3. **Callback Handler**: Processes Fast Track redirect returns
 4. **State Manager**: Maintains integration state and Fast Track IDs
 5. **UI Components**: User interface for triggering Fast Track integration
 
@@ -230,7 +231,6 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      frameSrc: ["'self'", process.env.FASTTRACK_BASE_URL],
       connectSrc: ["'self'", process.env.FASTTRACK_BASE_URL]
     }
   }
@@ -476,9 +476,19 @@ router.post('/configure', requireAuth, (req, res) => {
   
   markets.set(marketId, market);
   
-  // Generate Fast Track configuration URL
+  // Generate Fast Track configuration URL with callback
   const fastTrackUrl = new URL('/buyer/market_configurations/new', process.env.FASTTRACK_BASE_URL);
   fastTrackUrl.searchParams.append('access_token', req.session.fastTrackToken.access_token);
+  
+  // Add callback URL with state for security
+  const callbackState = uuidv4();
+  req.session.configurationStates = req.session.configurationStates || {};
+  req.session.configurationStates[callbackState] = marketId;
+  
+  const callbackUrl = new URL('/markets/fasttrack-callback', `http://localhost:${process.env.PORT || 4000}`);
+  callbackUrl.searchParams.append('state', callbackState);
+  
+  fastTrackUrl.searchParams.append('callback_url', callbackUrl.toString());
   
   res.json({
     success: true,
@@ -488,27 +498,42 @@ router.post('/configure', requireAuth, (req, res) => {
 });
 
 // Handle Fast Track completion callback
-router.post('/fasttrack-complete', requireAuth, (req, res) => {
-  const { marketId, fastTrackId, marketTitle, deadline, documentsCount } = req.body;
+router.get('/fasttrack-callback', requireAuth, (req, res) => {
+  const { fast_track_id, state, market_title, deadline, documents_count } = req.query;
   
-  const market = markets.get(marketId);
-  if (!market) {
-    return res.status(404).json({ error: 'Market not found' });
+  try {
+    // Validate state parameter
+    if (!state || !req.session.configurationStates || !req.session.configurationStates[state]) {
+      throw new Error('Invalid state parameter');
+    }
+    
+    const marketId = req.session.configurationStates[state];
+    delete req.session.configurationStates[state];
+    
+    const market = markets.get(marketId);
+    if (!market) {
+      throw new Error('Market not found');
+    }
+    
+    // Update market with Fast Track information
+    market.fastTrackId = fast_track_id;
+    market.status = 'configured';
+    market.fastTrackData = {
+      marketTitle: market_title,
+      deadline: deadline,
+      documentsCount: documents_count,
+      configuredAt: new Date().toISOString()
+    };
+    
+    markets.set(marketId, market);
+    
+    // Redirect to success page
+    res.redirect(`/markets/${marketId}?configured=true`);
+    
+  } catch (error) {
+    console.error('Fast Track callback error:', error.message);
+    res.redirect('/markets?error=' + encodeURIComponent(error.message));
   }
-  
-  // Update market with Fast Track information
-  market.fastTrackId = fastTrackId;
-  market.status = 'configured';
-  market.fastTrackData = {
-    marketTitle,
-    deadline,
-    documentsCount,
-    configuredAt: new Date().toISOString()
-  };
-  
-  markets.set(marketId, market);
-  
-  res.json({ success: true });
 });
 
 // Get market details
@@ -519,7 +544,10 @@ router.get('/:id', requireAuth, (req, res) => {
     return res.status(404).render('404');
   }
   
-  res.render('markets/show', { market });
+  res.render('markets/show', { 
+    market,
+    configured: req.query.configured === 'true'
+  });
 });
 
 module.exports = router;
@@ -667,23 +695,8 @@ Create `views/markets/new.ejs`:
                 </div>
             </form>
         </div>
-
-        <!-- Fast Track Integration Modal -->
-        <div id="fasttrack-modal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Fast Track Configuration</h3>
-                    <span class="close" onclick="closeFastTrackModal()">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <p>Configuring your market with Fast Track...</p>
-                    <iframe id="fasttrack-iframe" src="" width="100%" height="600"></iframe>
-                </div>
-            </div>
-        </div>
     </div>
 
-    <script src="/js/fasttrack-integration.js"></script>
     <script>
         document.getElementById('market-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -703,7 +716,8 @@ Create `views/markets/new.ejs`:
                 const result = await response.json();
                 
                 if (result.success) {
-                    openFastTrackConfiguration(result.marketId, result.fastTrackUrl);
+                    // Redirect to Fast Track for configuration
+                    window.location.href = result.fastTrackUrl;
                 } else {
                     alert('Error: ' + result.error);
                 }
@@ -716,200 +730,70 @@ Create `views/markets/new.ejs`:
 </html>
 ```
 
-### Fast Track Integration JavaScript
+Create `views/markets/show.ejs`:
 
-Create `public/js/fasttrack-integration.js`:
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Details - Procurement Platform</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Market Details</h1>
+            <a href="/markets" class="btn btn-outline">← Back to Markets</a>
+        </header>
 
-```javascript
-// Fast Track Integration Manager
-class FastTrackIntegration {
-    constructor() {
-        this.currentMarketId = null;
-        this.modal = null;
-        this.iframe = null;
-        
-        // Listen for PostMessage from Fast Track
-        window.addEventListener('message', this.handleMessage.bind(this));
-    }
-    
-    openConfiguration(marketId, fastTrackUrl) {
-        this.currentMarketId = marketId;
-        this.modal = document.getElementById('fasttrack-modal');
-        this.iframe = document.getElementById('fasttrack-iframe');
-        
-        if (!this.modal || !this.iframe) {
-            console.error('Fast Track modal elements not found');
-            return;
-        }
-        
-        // Set iframe source
-        this.iframe.src = fastTrackUrl;
-        
-        // Show modal
-        this.modal.style.display = 'block';
-        
-        // Handle iframe load events
-        this.iframe.onload = () => {
-            console.log('Fast Track configuration loaded');
-        };
-        
-        this.iframe.onerror = () => {
-            console.error('Failed to load Fast Track configuration');
-            this.showError('Failed to load Fast Track. Please try again.');
-        };
-    }
-    
-    handleMessage(event) {
-        // Verify origin for security
-        const fastTrackOrigin = new URL(window.FASTTRACK_BASE_URL || 'http://localhost:3000').origin;
-        if (event.origin !== fastTrackOrigin) {
-            console.warn('Ignoring message from unknown origin:', event.origin);
-            return;
-        }
-        
-        const message = event.data;
-        console.log('Received Fast Track message:', message);
-        
-        switch (message.type) {
-            case 'fasttrack:loaded':
-                this.handleLoaded(message);
-                break;
+        <% if (configured) { %>
+            <div class="success-message">
+                <h2>✅ Market Successfully Configured!</h2>
+                <p>Your market has been configured with Fast Track and is ready for candidates.</p>
+            </div>
+        <% } %>
+
+        <div class="market-details">
+            <div class="market-info">
+                <h2><%= market.title %></h2>
+                <p><%= market.description %></p>
                 
-            case 'fasttrack:loading':
-                this.handleLoading(message);
-                break;
-                
-            case 'fasttrack:completed':
-                this.handleCompleted(message);
-                break;
-                
-            case 'fasttrack:error':
-                this.handleError(message);
-                break;
-                
-            default:
-                console.log('Unknown message type:', message.type);
-        }
-    }
-    
-    handleLoaded(message) {
-        console.log('Fast Track loaded successfully');
-        
-        // Adjust iframe height if provided
-        if (message.height && this.iframe) {
-            this.iframe.style.height = message.height + 'px';
-        }
-    }
-    
-    handleLoading(message) {
-        console.log('Fast Track is loading...');
-        // Could show loading spinner here
-    }
-    
-    async handleCompleted(message) {
-        console.log('Fast Track configuration completed:', message);
-        
-        const { fastTrackId, marketTitle, deadline, documentsCount } = message;
-        
-        try {
-            // Notify our backend about the completion
-            const response = await fetch('/markets/fasttrack-complete', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    marketId: this.currentMarketId,
-                    fastTrackId,
-                    marketTitle,
-                    deadline,
-                    documentsCount
-                })
-            });
-            
-            const result = await response.json();
-            
-            if (result.success) {
-                this.showSuccess(`Market configured successfully! Fast Track ID: ${fastTrackId}`);
-                
-                // Close modal after delay
-                setTimeout(() => {
-                    this.closeModal();
-                    // Redirect to markets list
-                    window.location.href = '/markets';
-                }, 2000);
-            } else {
-                this.showError('Failed to save Fast Track configuration');
+                <div class="market-meta">
+                    <p><strong>Status:</strong> <%= market.status %></p>
+                    <p><strong>Created:</strong> <%= new Date(market.createdAt).toLocaleDateString() %></p>
+                    
+                    <% if (market.fastTrackId) { %>
+                        <p><strong>Fast Track ID:</strong> 
+                            <code><%= market.fastTrackId %></code>
+                            <button onclick="copyToClipboard('<%= market.fastTrackId %>')">Copy</button>
+                        </p>
+                    <% } %>
+                </div>
+            </div>
+
+            <% if (market.fastTrackData) { %>
+                <div class="fasttrack-data">
+                    <h3>Fast Track Configuration</h3>
+                    <p><strong>Market Title:</strong> <%= market.fastTrackData.marketTitle %></p>
+                    <p><strong>Deadline:</strong> <%= market.fastTrackData.deadline %></p>
+                    <p><strong>Documents Count:</strong> <%= market.fastTrackData.documentsCount %></p>
+                    <p><strong>Configured At:</strong> <%= new Date(market.fastTrackData.configuredAt).toLocaleString() %></p>
+                </div>
+            <% } %>
+        </div>
+
+        <script>
+            function copyToClipboard(text) {
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('Fast Track ID copied to clipboard!');
+                });
             }
-            
-        } catch (error) {
-            console.error('Error processing Fast Track completion:', error);
-            this.showError('Network error while saving configuration');
-        }
-    }
-    
-    handleError(message) {
-        console.error('Fast Track error:', message);
-        this.showError(message.error || 'An error occurred in Fast Track');
-    }
-    
-    closeModal() {
-        if (this.modal) {
-            this.modal.style.display = 'none';
-        }
-        
-        if (this.iframe) {
-            this.iframe.src = '';
-        }
-        
-        this.currentMarketId = null;
-    }
-    
-    showSuccess(message) {
-        this.showNotification(message, 'success');
-    }
-    
-    showError(message) {
-        this.showNotification(message, 'error');
-    }
-    
-    showNotification(message, type) {
-        const notification = document.createElement('div');
-        notification.className = `notification ${type}`;
-        notification.textContent = message;
-        
-        // Add close button
-        const closeBtn = document.createElement('span');
-        closeBtn.className = 'notification-close';
-        closeBtn.innerHTML = '&times;';
-        closeBtn.onclick = () => notification.remove();
-        notification.appendChild(closeBtn);
-        
-        document.body.insertBefore(notification, document.body.firstChild);
-        
-        // Auto-remove after 5 seconds
-        setTimeout(() => {
-            if (notification.parentNode) {
-                notification.remove();
-            }
-        }, 5000);
-    }
-}
-
-// Initialize Fast Track integration
-const fastTrack = new FastTrackIntegration();
-
-// Global functions for easy access
-function openFastTrackConfiguration(marketId, fastTrackUrl) {
-    fastTrack.openConfiguration(marketId, fastTrackUrl);
-}
-
-function closeFastTrackModal() {
-    fastTrack.closeModal();
-}
-
-// Set Fast Track base URL for PostMessage origin verification
-window.FASTTRACK_BASE_URL = 'http://localhost:3000';
+        </script>
+    </div>
+</body>
+</html>
 ```
 
 ### Styling
@@ -1125,65 +1009,57 @@ body {
     text-align: center;
 }
 
-/* Modal Styles */
-.modal {
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0, 0, 0, 0.5);
-}
-
-.modal-content {
-    background-color: white;
-    margin: 2% auto;
-    padding: 0;
-    border-radius: 0.75rem;
-    width: 90%;
-    max-width: 1000px;
-    max-height: 90vh;
-    overflow: hidden;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-}
-
-.modal-header {
-    padding: 1.5rem;
-    border-bottom: 1px solid #e2e8f0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-header h3 {
-    margin: 0;
-    color: #1a202c;
-}
-
-.close {
-    color: #a0aec0;
-    font-size: 2rem;
-    font-weight: bold;
-    cursor: pointer;
-    transition: color 0.2s;
-}
-
-.close:hover {
-    color: #2d3748;
-}
-
-.modal-body {
-    padding: 1.5rem;
-    max-height: calc(90vh - 100px);
-    overflow: auto;
-}
-
-.modal-body iframe {
-    border: none;
-    border-radius: 0.375rem;
+/* Market Details */
+.market-details {
     background: white;
+    padding: 2rem;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.market-info h2 {
+    color: #1a202c;
+    margin-bottom: 1rem;
+}
+
+.market-meta {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.market-meta p {
+    margin-bottom: 0.5rem;
+}
+
+.fasttrack-data {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.fasttrack-data h3 {
+    color: #276749;
+    margin-bottom: 1rem;
+}
+
+/* Success Message */
+.success-message {
+    background: #f0fff4;
+    border: 1px solid #9ae6b4;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.success-message h2 {
+    color: #276749;
+    margin-bottom: 0.5rem;
+}
+
+.success-message p {
+    color: #2f855a;
 }
 
 /* Notifications */
@@ -1206,12 +1082,6 @@ body {
 
 .notification.error {
     background-color: #e53e3e;
-}
-
-.notification-close {
-    margin-left: 1rem;
-    cursor: pointer;
-    font-size: 1.2rem;
 }
 
 @keyframes slideIn {
@@ -1243,11 +1113,6 @@ body {
         text-align: center;
     }
     
-    .modal-content {
-        width: 95%;
-        margin: 5% auto;
-    }
-    
     .features {
         grid-template-columns: 1fr;
     }
@@ -1261,8 +1126,8 @@ Update `package.json`:
 ```json
 {
   "name": "fasttrack-editor-demo",
-  "version": "1.0.0",
-  "description": "Demo editor app integrating with Fast Track",
+  "version": "2.0.0",
+  "description": "Demo editor app integrating with Fast Track using redirect flow",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
@@ -1332,6 +1197,8 @@ Create `app/services/fast_track_oauth_service.rb`:
 ```ruby
 # frozen_string_literal: true
 
+require 'cgi'
+
 class FastTrackOauthService
   include Rails.application.routes.url_helpers
 
@@ -1343,7 +1210,14 @@ class FastTrackOauthService
       ENV['FASTTRACK_CLIENT_SECRET'],
       site: ENV['FASTTRACK_BASE_URL'],
       authorize_url: '/oauth/authorize',
-      token_url: '/oauth/token'
+      token_url: '/oauth/token',
+      token_method: :post,
+      connection_opts: {
+        headers: {
+          'Accept' => 'application/json',
+          'Content-Type' => 'application/x-www-form-urlencoded'
+        }
+      }
     )
   end
 
@@ -1356,17 +1230,32 @@ class FastTrackOauthService
   end
 
   def exchange_code_for_token(code)
-    client.auth_code.get_token(
+    Rails.logger.info "Exchanging code for token: #{code}"
+    Rails.logger.info "Redirect URI: #{ENV['FASTTRACK_CALLBACK_URL']}"
+    
+    token = client.auth_code.get_token(
       code,
       redirect_uri: ENV['FASTTRACK_CALLBACK_URL']
     )
+    
+    Rails.logger.info "Token obtained successfully: #{token.token}"
+    token
   rescue OAuth2::Error => e
     Rails.logger.error "OAuth token exchange failed: #{e.message}"
     raise StandardError, "Authentication failed: #{e.description}"
+  rescue => e
+    Rails.logger.error "Unexpected error during token exchange: #{e.message}"
+    raise StandardError, "Authentication failed: #{e.message}"
   end
 
-  def configuration_url(access_token)
-    "#{ENV['FASTTRACK_BASE_URL']}/buyer/market_configurations/new?access_token=#{access_token}"
+  def configuration_url(access_token, callback_url)
+    url = "#{ENV['FASTTRACK_BASE_URL']}/buyer/market_configurations/new"
+    params = {
+      access_token: access_token,
+      callback_url: callback_url
+    }
+    
+    "#{url}?#{URI.encode_www_form(params)}"
   end
 end
 ```
@@ -1485,6 +1374,7 @@ class MarketsController < ApplicationController
   end
 
   def show
+    @configured = params[:configured] == 'true'
   end
 
   def configure
@@ -1496,8 +1386,16 @@ class MarketsController < ApplicationController
       status: 'configuring'
     )
 
+    # Generate callback URL with state
+    callback_state = SecureRandom.hex(16)
+    session[:configuration_states] ||= {}
+    session[:configuration_states][callback_state] = @market.id
+    
+    callback_url = markets_fasttrack_callback_url(state: callback_state)
+    
     fast_track_url = @oauth_service.configuration_url(
-      session[:fast_track_token]['access_token']
+      session[:fast_track_token]['access_token'],
+      callback_url
     )
 
     render json: {
@@ -1512,25 +1410,35 @@ class MarketsController < ApplicationController
     }, status: :unprocessable_entity
   end
 
-  def fasttrack_complete
-    completion_params = params.permit(:market_id, :fast_track_id, :market_title, :deadline, :documents_count)
+  def fasttrack_callback
+    callback_params = params.permit(:fast_track_id, :state, :market_title, :deadline, :documents_count)
     
-    market = Market.find(completion_params[:market_id])
+    # Validate state parameter
+    state = callback_params[:state]
+    unless state && session[:configuration_states] && session[:configuration_states][state]
+      redirect_to markets_path, alert: 'Invalid callback state'
+      return
+    end
+    
+    market_id = session[:configuration_states][state]
+    session[:configuration_states].delete(state)
+    
+    market = Market.find(market_id)
     
     market.update!(
-      fast_track_id: completion_params[:fast_track_id],
+      fast_track_id: callback_params[:fast_track_id],
       status: 'configured',
       fast_track_data: {
-        market_title: completion_params[:market_title],
-        deadline: completion_params[:deadline],
-        documents_count: completion_params[:documents_count],
+        market_title: callback_params[:market_title],
+        deadline: callback_params[:deadline],
+        documents_count: callback_params[:documents_count],
         configured_at: Time.current.iso8601
       }
     )
 
-    render json: { success: true }
+    redirect_to market_path(market, configured: true)
   rescue ActiveRecord::RecordNotFound
-    render json: { success: false, error: 'Market not found' }, status: :not_found
+    redirect_to markets_path, alert: 'Market not found'
   end
 
   private
@@ -1539,7 +1447,7 @@ class MarketsController < ApplicationController
     token = session[:fast_track_token]
     
     unless token && (!token['expires_at'] || Time.current.to_i < token['expires_at'])
-      render json: { error: 'Authentication required' }, status: :unauthorized
+      redirect_to root_path, alert: 'Authentication required'
     end
   end
 
@@ -1606,7 +1514,7 @@ Rails.application.routes.draw do
   resources :markets, only: [:index, :new, :show] do
     collection do
       post :configure
-      post :fasttrack_complete
+      get :fasttrack_callback
     end
   end
 end
@@ -1614,130 +1522,39 @@ end
 
 ---
 
-## PostMessage Communication
+## Redirect Flow Communication
 
-### Message Types
+### Flow Sequence
 
-Fast Track sends the following PostMessage events:
+The redirect flow eliminates the complexity of PostMessage communication:
 
-#### 1. `fasttrack:loaded`
-Sent when Fast Track interface is fully loaded.
+1. **Configuration Initiation**: Editor creates market and redirects to Fast Track
+2. **User Configuration**: User completes configuration in Fast Track
+3. **Callback Redirect**: Fast Track redirects back to editor with results
+4. **Processing**: Editor processes the callback and updates market status
 
-```javascript
-{
-  type: 'fasttrack:loaded',
-  height: 800  // Suggested iframe height
-}
-```
+### Key Benefits
 
-#### 2. `fasttrack:loading`
-Sent during loading states.
+- **Simpler Security**: No cross-domain messaging concerns
+- **Better UX**: Full browser window for configuration
+- **Easier Debugging**: Standard HTTP requests and responses
+- **Mobile Friendly**: No iframe constraints
 
-```javascript
-{
-  type: 'fasttrack:loading'
-}
-```
+### State Management
 
-#### 3. `fasttrack:completed`
-Sent when market configuration is completed.
+Use cryptographically secure state parameters to prevent CSRF attacks:
 
 ```javascript
-{
-  type: 'fasttrack:completed',
-  fastTrackId: 'abc123def456',
-  marketTitle: 'Office Supplies Procurement 2025',
-  deadline: '2025-12-31T23:59:59Z',
-  documentsCount: 7
-}
-```
+// Generate secure state
+const state = require('crypto').randomBytes(16).toString('hex');
 
-#### 4. `fasttrack:error`
-Sent when an error occurs.
+// Store in session
+req.session.configurationStates = req.session.configurationStates || {};
+req.session.configurationStates[state] = marketId;
 
-```javascript
-{
-  type: 'fasttrack:error',
-  error: 'Configuration failed',
-  details: 'Token expired'
-}
-```
-
-### Implementation Best Practices
-
-#### Origin Validation
-
-```javascript
-window.addEventListener('message', (event) => {
-  // CRITICAL: Always validate origin
-  const allowedOrigin = 'http://localhost:3000'; // Fast Track origin
-  if (event.origin !== allowedOrigin) {
-    console.warn('Ignoring message from unauthorized origin:', event.origin);
-    return;
-  }
-  
-  handleFastTrackMessage(event.data);
-});
-```
-
-#### Message Handling
-
-```javascript
-function handleFastTrackMessage(message) {
-  switch (message.type) {
-    case 'fasttrack:completed':
-      handleConfigurationComplete(message);
-      break;
-      
-    case 'fasttrack:error':
-      handleConfigurationError(message);
-      break;
-      
-    case 'fasttrack:loaded':
-      adjustIframeHeight(message.height);
-      break;
-      
-    default:
-      console.log('Unhandled message type:', message.type);
-  }
-}
-```
-
-#### Error Handling
-
-```javascript
-async function handleConfigurationComplete(message) {
-  try {
-    const response = await fetch('/markets/fasttrack-complete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        marketId: currentMarketId,
-        fastTrackId: message.fastTrackId,
-        marketTitle: message.marketTitle,
-        deadline: message.deadline,
-        documentsCount: message.documentsCount
-      })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      showSuccess('Market configured successfully!');
-      closeFastTrackModal();
-      redirectToMarkets();
-    } else {
-      throw new Error(result.error || 'Unknown error');
-    }
-    
-  } catch (error) {
-    console.error('Failed to process configuration completion:', error);
-    showError('Failed to save configuration: ' + error.message);
-  }
+// Validate on callback
+if (!req.session.configurationStates[receivedState]) {
+  throw new Error('Invalid state parameter');
 }
 ```
 
@@ -1752,125 +1569,65 @@ async function handleConfigurationComplete(message) {
 ```javascript
 // Generate cryptographically secure state
 function generateState() {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+  return require('crypto').randomBytes(16).toString('hex');
 }
 
-// Store state in session/localStorage
-const state = generateState();
-sessionStorage.setItem('oauth_state', state);
-
-// Validate on callback
-const receivedState = urlParams.get('state');
-const storedState = sessionStorage.getItem('oauth_state');
-
-if (receivedState !== storedState) {
-  throw new Error('Invalid state parameter - possible CSRF attack');
+// Validate state on callback
+function validateState(receivedState, sessionStates) {
+  return sessionStates && sessionStates[receivedState];
 }
 ```
 
 #### Token Storage
 
 ```javascript
-// Secure token storage
-class TokenManager {
-  static store(token) {
-    // Use sessionStorage for temporary storage
-    sessionStorage.setItem('fast_track_token', JSON.stringify({
-      access_token: token.access_token,
-      expires_at: Date.now() + (token.expires_in * 1000),
-      scope: token.scope
-    }));
-  }
-  
-  static get() {
-    const stored = sessionStorage.getItem('fast_track_token');
-    if (!stored) return null;
-    
-    const token = JSON.parse(stored);
-    
-    // Check expiration
-    if (Date.now() > token.expires_at) {
-      this.clear();
-      return null;
-    }
-    
-    return token;
-  }
-  
-  static clear() {
-    sessionStorage.removeItem('fast_track_token');
-  }
+// Secure token storage in session
+req.session.fastTrackToken = {
+  access_token: token.access_token,
+  expires_at: Date.now() + (token.expires_in * 1000),
+  scope: token.scope
+};
+
+// Token validation
+function isTokenValid(token) {
+  return token && Date.now() < token.expires_at;
 }
 ```
 
-### Cross-Domain Security
+### Callback URL Security
 
-#### Content Security Policy
-
-```html
-<meta http-equiv="Content-Security-Policy" content="
-  default-src 'self';
-  script-src 'self' 'unsafe-inline';
-  style-src 'self' 'unsafe-inline';
-  frame-src 'self' http://localhost:3000;
-  connect-src 'self' http://localhost:3000;
-">
-```
-
-#### PostMessage Origin Validation
+#### URL Validation
 
 ```javascript
-const ALLOWED_ORIGINS = [
-  'http://localhost:3000',           // Development
-  'https://fasttrack.gouv.fr'        // Production
+// Validate callback URLs against whitelist
+const ALLOWED_CALLBACK_DOMAINS = [
+  'localhost:4000',
+  'your-platform.com'
 ];
 
-window.addEventListener('message', (event) => {
-  if (!ALLOWED_ORIGINS.includes(event.origin)) {
-    console.warn('Blocked message from unauthorized origin:', event.origin);
-    return;
-  }
-  
-  // Process message
-  handleFastTrackMessage(event.data);
-});
+function validateCallbackUrl(url) {
+  const parsedUrl = new URL(url);
+  return ALLOWED_CALLBACK_DOMAINS.includes(parsedUrl.host);
+}
 ```
 
-### Input Validation
+#### Parameter Sanitization
 
 ```javascript
-function validateFastTrackMessage(message) {
-  // Validate message structure
-  if (!message || typeof message !== 'object') {
-    throw new Error('Invalid message format');
-  }
+// Sanitize callback parameters
+function sanitizeCallbackParams(params) {
+  const sanitized = {};
   
-  // Validate required fields
-  if (!message.type || typeof message.type !== 'string') {
-    throw new Error('Missing or invalid message type');
-  }
+  // Only allow expected parameters
+  const allowedParams = ['fast_track_id', 'state', 'market_title', 'deadline', 'documents_count'];
   
-  // Validate specific message types
-  switch (message.type) {
-    case 'fasttrack:completed':
-      if (!message.fastTrackId || typeof message.fastTrackId !== 'string') {
-        throw new Error('Invalid Fast Track ID');
-      }
-      if (!message.marketTitle || typeof message.marketTitle !== 'string') {
-        throw new Error('Invalid market title');
-      }
-      break;
-      
-    case 'fasttrack:error':
-      if (!message.error || typeof message.error !== 'string') {
-        throw new Error('Invalid error message');
-      }
-      break;
-  }
+  allowedParams.forEach(param => {
+    if (params[param]) {
+      sanitized[param] = String(params[param]).trim();
+    }
+  });
   
-  return true;
+  return sanitized;
 }
 ```
 
@@ -1889,72 +1646,48 @@ function validateFastTrackMessage(message) {
 - [ ] Token expiration is handled
 
 #### Fast Track Integration
-- [ ] iFrame loads Fast Track correctly
-- [ ] Modal displays properly
-- [ ] PostMessage communication works
-- [ ] Configuration completion is processed
+- [ ] Redirect to Fast Track works
+- [ ] Configuration completes successfully
+- [ ] Callback URL receives correct parameters
+- [ ] Market status updates properly
 - [ ] Error handling works
-- [ ] Modal closes after completion
 
 #### UI/UX
 - [ ] Loading states are shown
 - [ ] Error messages are clear
 - [ ] Success feedback is provided
 - [ ] Responsive design works
-- [ ] Accessibility requirements met
+- [ ] Mobile experience is good
 
 ### Debugging Tools
 
-#### Browser DevTools
+#### Enhanced Logging
 
 ```javascript
-// Enable debug logging
-window.FASTTRACK_DEBUG = true;
-
-// Enhanced message handler with debugging
-function handleMessage(event) {
-  if (window.FASTTRACK_DEBUG) {
-    console.group('🔄 Fast Track Message');
-    console.log('Origin:', event.origin);
-    console.log('Data:', event.data);
-    console.log('Timestamp:', new Date().toISOString());
-    console.groupEnd();
-  }
-  
-  // Process message...
-}
-```
-
-#### Network Monitoring
-
-```javascript
-// Log all Fast Track API calls
-const originalFetch = window.fetch;
-window.fetch = function(...args) {
-  const [url, options] = args;
-  
-  if (url.includes('fasttrack') || url.includes('oauth')) {
-    console.log('🌐 Fast Track API Call:', {
-      url,
-      method: options?.method || 'GET',
-      headers: options?.headers,
-      body: options?.body
+// Debug logging for OAuth flow
+function logOAuthStep(step, data) {
+  if (process.env.DEBUG_OAUTH) {
+    console.log(`🔐 OAuth ${step}:`, {
+      timestamp: new Date().toISOString(),
+      data: data
     });
   }
-  
-  return originalFetch.apply(this, args);
-};
+}
+
+// Usage
+logOAuthStep('authorization_started', { state: state });
+logOAuthStep('token_received', { scope: token.scope, expires_in: token.expires_in });
 ```
 
-#### Integration Testing Script
+#### Integration Testing
 
 ```javascript
-// Automated integration test
-async function testFastTrackIntegration() {
-  console.log('🧪 Testing Fast Track Integration...');
+// Test redirect flow
+async function testRedirectFlow() {
+  console.log('🧪 Testing Fast Track Redirect Flow...');
   
   try {
-    // Test 1: Check authentication status
+    // Test 1: Check authentication
     const authResponse = await fetch('/auth/status');
     const authData = await authResponse.json();
     console.log('✅ Auth Status:', authData.authenticated ? 'Authenticated' : 'Not authenticated');
@@ -1978,132 +1711,18 @@ async function testFastTrackIntegration() {
     console.log('✅ Market Creation:', marketData.success ? 'Success' : 'Failed');
     
     if (marketData.success) {
-      console.log('📋 Market ID:', marketData.marketId);
-      console.log('🔗 Fast Track URL:', marketData.fastTrackUrl);
+      console.log('📋 Market ID:', marketData.market_id);
+      console.log('🔗 Fast Track URL:', marketData.fast_track_url);
+      
+      // Test 3: Validate callback URL
+      const callbackUrl = new URL(marketData.fast_track_url);
+      const callbackParam = callbackUrl.searchParams.get('callback_url');
+      console.log('🔄 Callback URL:', callbackParam);
     }
     
   } catch (error) {
     console.error('❌ Test Failed:', error.message);
   }
-}
-
-// Run test
-testFastTrackIntegration();
-```
-
-### Common Issues & Solutions
-
-#### Issue: CORS Errors
-
-**Problem**: Browser blocks requests due to CORS policy.
-
-**Solution**:
-```javascript
-// Server-side CORS configuration (Express)
-app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:4000'],
-  credentials: true
-}));
-
-// Rails CORS configuration
-# config/initializers/cors.rb
-Rails.application.config.middleware.insert_before 0, Rack::Cors do
-  allow do
-    origins 'localhost:3000', 'localhost:4000'
-    resource '*', 
-      headers: :any, 
-      methods: [:get, :post, :put, :patch, :delete, :options, :head],
-      credentials: true
-  end
-end
-```
-
-#### Issue: PostMessage Not Received
-
-**Problem**: iFrame PostMessage events not reaching parent window.
-
-**Solution**:
-```javascript
-// Check iframe loading
-iframe.onload = function() {
-  console.log('✅ iFrame loaded successfully');
-};
-
-iframe.onerror = function() {
-  console.error('❌ iFrame failed to load');
-};
-
-// Verify event listener
-window.addEventListener('message', function(event) {
-  console.log('📨 Message received from:', event.origin);
-  console.log('📨 Message data:', event.data);
-});
-```
-
-#### Issue: OAuth Token Expired
-
-**Problem**: Access token expires during configuration.
-
-**Solution**:
-```javascript
-// Token refresh mechanism
-async function ensureValidToken() {
-  const token = getStoredToken();
-  
-  if (!token || isTokenExpired(token)) {
-    // Redirect to re-authenticate
-    window.location.href = '/auth/fasttrack';
-    return false;
-  }
-  
-  return true;
-}
-
-// Check before opening Fast Track
-async function openFastTrack() {
-  if (await ensureValidToken()) {
-    // Proceed with Fast Track integration
-    showFastTrackModal();
-  }
-}
-```
-
-#### Issue: Modal Not Closing
-
-**Problem**: Fast Track modal doesn't close after completion.
-
-**Solution**:
-```javascript
-// Auto-close with timeout fallback
-function closeFastTrackModal() {
-  const modal = document.getElementById('fasttrack-modal');
-  const iframe = document.getElementById('fasttrack-iframe');
-  
-  // Clear iframe source
-  if (iframe) {
-    iframe.src = '';
-  }
-  
-  // Hide modal
-  if (modal) {
-    modal.style.display = 'none';
-  }
-  
-  // Clear any stored state
-  currentMarketId = null;
-}
-
-// Auto-close fallback
-function openFastTrackModal() {
-  // ... show modal code ...
-  
-  // Fallback auto-close after 10 minutes
-  setTimeout(() => {
-    if (document.getElementById('fasttrack-modal').style.display !== 'none') {
-      console.warn('Auto-closing Fast Track modal due to timeout');
-      closeFastTrackModal();
-    }
-  }, 10 * 60 * 1000); // 10 minutes
 }
 ```
 
@@ -2135,131 +1754,7 @@ DATABASE_URL=postgresql://user:password@host:port/database
 FORCE_HTTPS=true
 ```
 
-#### Docker Configuration
-
-Create `Dockerfile`:
-
-```dockerfile
-FROM node:18-alpine
-
-# Set working directory
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
-RUN npm ci --only=production
-
-# Copy application code
-COPY . .
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
-
-# Change ownership
-RUN chown -R nextjs:nodejs /app
-USER nextjs
-
-# Expose port
-EXPOSE 4000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:4000/health || exit 1
-
-# Start application
-CMD ["npm", "start"]
-```
-
-#### Docker Compose
-
-Create `docker-compose.yml`:
-
-```yaml
-version: '3.8'
-
-services:
-  editor-app:
-    build: .
-    ports:
-      - "4000:4000"
-    environment:
-      - NODE_ENV=production
-      - FASTTRACK_BASE_URL=https://fasttrack.gouv.fr
-      - FASTTRACK_CLIENT_ID=${FASTTRACK_CLIENT_ID}
-      - FASTTRACK_CLIENT_SECRET=${FASTTRACK_CLIENT_SECRET}
-      - FASTTRACK_CALLBACK_URL=https://your-platform.com/auth/fasttrack/callback
-      - SESSION_SECRET=${SESSION_SECRET}
-      - DATABASE_URL=${DATABASE_URL}
-    depends_on:
-      - postgres
-    restart: unless-stopped
-
-  postgres:
-    image: postgres:15-alpine
-    environment:
-      - POSTGRES_DB=editor_app_production
-      - POSTGRES_USER=${DB_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
-
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./ssl:/etc/nginx/ssl
-    depends_on:
-      - editor-app
-    restart: unless-stopped
-
-volumes:
-  postgres_data:
-```
-
 ### Security Hardening
-
-#### HTTPS Configuration
-
-```nginx
-# nginx.conf
-server {
-    listen 443 ssl http2;
-    server_name your-platform.com;
-
-    ssl_certificate /etc/nginx/ssl/cert.pem;
-    ssl_certificate_key /etc/nginx/ssl/key.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512;
-
-    # Security headers
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-
-    location / {
-        proxy_pass http://editor-app:4000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-
-# Redirect HTTP to HTTPS
-server {
-    listen 80;
-    server_name your-platform.com;
-    return 301 https://$server_name$request_uri;
-}
-```
 
 #### Application Security
 
@@ -2284,7 +1779,6 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      frameSrc: ["'self'", "https://fasttrack.gouv.fr"],
       connectSrc: ["'self'", "https://fasttrack.gouv.fr"],
       imgSrc: ["'self'", "data:", "https:"],
     }
@@ -2295,286 +1789,61 @@ app.use(helmet({
     preload: true
   }
 }));
-
-// Session security
-app.use(session({
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: true, // HTTPS only
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'strict'
-  },
-  name: 'sessionId' // Don't use default name
-}));
-```
-
-### Monitoring & Logging
-
-#### Application Monitoring
-
-```javascript
-// Health check endpoint
-app.get('/health', (req, res) => {
-  const health = {
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    checks: {
-      database: 'healthy', // Check DB connection
-      fasttrack: 'healthy', // Check Fast Track connectivity
-      memory: process.memoryUsage(),
-    }
-  };
-  
-  res.json(health);
-});
-
-// Error logging
-app.use((error, req, res, next) => {
-  console.error('Application Error:', {
-    message: error.message,
-    stack: error.stack,
-    url: req.url,
-    method: req.method,
-    ip: req.ip,
-    userAgent: req.get('User-Agent'),
-    timestamp: new Date().toISOString()
-  });
-  
-  res.status(500).json({
-    error: 'Internal server error',
-    requestId: req.id
-  });
-});
-```
-
-#### Structured Logging
-
-```javascript
-const winston = require('winston');
-
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.errors({ stack: true }),
-    winston.format.json()
-  ),
-  defaultMeta: { service: 'editor-app' },
-  transports: [
-    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'logs/combined.log' }),
-    new winston.transports.Console({
-      format: winston.format.simple()
-    })
-  ]
-});
-
-// Usage
-logger.info('Fast Track integration initiated', {
-  userId: req.session.user?.id,
-  marketId: marketId,
-  fastTrackUrl: fastTrackUrl
-});
-
-logger.error('OAuth token exchange failed', {
-  error: error.message,
-  clientId: process.env.FASTTRACK_CLIENT_ID,
-  redirectUri: process.env.FASTTRACK_CALLBACK_URL
-});
 ```
 
 ---
 
 ## Troubleshooting
 
-### Common Integration Issues
+### Common Issues
 
 #### 1. OAuth Authorization Fails
 
 **Symptoms**: User gets redirected to Fast Track but sees error page.
 
-**Possible Causes**:
-- Invalid client credentials
-- Incorrect redirect URI
-- Missing required scopes
-
-**Debugging**:
-```bash
-# Check OAuth configuration
-curl -X POST http://localhost:3000/oauth/authorize \
-  -d "client_id=YOUR_CLIENT_ID" \
-  -d "redirect_uri=YOUR_REDIRECT_URI" \
-  -d "response_type=code" \
-  -d "scope=market_config"
-```
-
 **Solutions**:
 - Verify client ID and secret with Fast Track admin
-- Ensure redirect URI exactly matches registered URL
+- Ensure callback URL exactly matches registered URL
 - Check that your editor is authorized and active
 
 #### 2. Token Exchange Fails
 
 **Symptoms**: Callback receives code but token exchange returns error.
 
-**Debugging**:
-```javascript
-// Log token exchange request
-console.log('Token exchange request:', {
-  url: '/oauth/token',
-  method: 'POST',
-  body: {
-    grant_type: 'authorization_code',
-    client_id: clientId,
-    client_secret: '[REDACTED]',
-    code: code,
-    redirect_uri: redirectUri
-  }
-});
-```
-
 **Solutions**:
 - Check authorization code hasn't expired (5 minutes)
 - Verify client secret is correct
-- Ensure redirect URI matches exactly
+- Ensure callback URL matches exactly
 
-#### 3. iFrame Doesn't Load
+#### 3. Callback Not Received
 
-**Symptoms**: Fast Track modal shows but iFrame is blank or shows error.
-
-**Debugging**:
-```javascript
-iframe.onload = function() {
-  console.log('iFrame loaded successfully');
-  console.log('iFrame URL:', this.src);
-  console.log('iFrame content window:', this.contentWindow);
-};
-
-iframe.onerror = function(e) {
-  console.error('iFrame load error:', e);
-  console.error('iFrame URL:', this.src);
-};
-```
+**Symptoms**: Fast Track configuration completes but callback doesn't arrive.
 
 **Solutions**:
-- Check access token is valid and not expired
-- Verify CORS headers allow iframe embedding
-- Ensure CSP headers allow frame-src from Fast Track domain
+- Verify callback URL is accessible
+- Check for network/firewall issues
+- Ensure callback endpoint is implemented correctly
 
-#### 4. PostMessage Not Received
+#### 4. State Parameter Validation Fails
 
-**Symptoms**: Market configuration completes but parent window doesn't receive notification.
-
-**Debugging**:
-```javascript
-// Debug all messages
-window.addEventListener('message', function(event) {
-  console.log('Message received:', {
-    origin: event.origin,
-    data: event.data,
-    source: event.source
-  });
-}, true);
-
-// Check iframe reference
-console.log('iFrame element:', document.getElementById('fasttrack-iframe'));
-console.log('iFrame content window:', iframe.contentWindow);
-```
+**Symptoms**: Callback returns "Invalid state parameter" error.
 
 **Solutions**:
-- Verify origin validation allows Fast Track domain
-- Check iframe is fully loaded before expecting messages
-- Ensure message event listener is attached before iframe loads
-
-### Performance Optimization
-
-#### 1. Preload Fast Track Resources
-
-```html
-<!-- Preload Fast Track domain -->
-<link rel="preconnect" href="https://fasttrack.gouv.fr">
-<link rel="dns-prefetch" href="https://fasttrack.gouv.fr">
-```
-
-#### 2. Optimize Modal Loading
-
-```javascript
-// Lazy load modal content
-function openFastTrackModal() {
-  if (!document.getElementById('fasttrack-modal')) {
-    createFastTrackModal();
-  }
-  
-  // Show modal
-  const modal = document.getElementById('fasttrack-modal');
-  modal.style.display = 'block';
-  
-  // Load iframe after modal is visible
-  setTimeout(() => {
-    const iframe = document.getElementById('fasttrack-iframe');
-    iframe.src = fastTrackUrl;
-  }, 100);
-}
-```
-
-#### 3. Token Caching
-
-```javascript
-// Cache valid tokens to avoid unnecessary OAuth flows
-class TokenCache {
-  static set(token) {
-    const cacheData = {
-      token: token,
-      expires: Date.now() + (token.expires_in * 1000) - 60000 // 1 minute buffer
-    };
-    
-    sessionStorage.setItem('ft_token_cache', JSON.stringify(cacheData));
-  }
-  
-  static get() {
-    const cached = sessionStorage.getItem('ft_token_cache');
-    if (!cached) return null;
-    
-    const data = JSON.parse(cached);
-    if (Date.now() > data.expires) {
-      this.clear();
-      return null;
-    }
-    
-    return data.token;
-  }
-  
-  static clear() {
-    sessionStorage.removeItem('ft_token_cache');
-  }
-}
-```
-
-### Support & Documentation
-
-For additional support:
-
-1. **Fast Track Documentation**: Available at `/docs` endpoint
-2. **OAuth2 Specification**: [RFC 6749](https://tools.ietf.org/html/rfc6749)
-3. **PostMessage API**: [MDN Documentation](https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage)
-4. **CORS Configuration**: [MDN CORS Guide](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)
+- Ensure state generation is cryptographically secure
+- Verify state storage in session
+- Check state parameter isn't modified in transit
 
 ---
 
 ## Conclusion
 
-This comprehensive guide provides everything needed to integrate your procurement platform with Fast Track's buyer flow. The implementation ensures security, reliability, and excellent user experience while maintaining compliance with OAuth2 standards and web security best practices.
+This redirect-based integration provides a simpler, more secure, and user-friendly approach to Fast Track integration. The elimination of iframe complexity results in better mobile experience, easier debugging, and more maintainable code.
 
-Key takeaways:
+Key advantages:
+- **Simplified Architecture**: No PostMessage complexity
+- **Better Security**: Standard OAuth2 flow with state validation
+- **Improved UX**: Full browser window experience
+- **Mobile Friendly**: No iframe constraints
+- **Easier Debugging**: Standard HTTP requests and responses
 
-- **OAuth2 Integration**: Secure authentication flow with proper state validation
-- **iFrame/Popup Support**: Seamless embedded experience with PostMessage communication
-- **Error Handling**: Robust error handling and recovery mechanisms
-- **Security**: CSRF protection, origin validation, and secure token storage
-- **Production Ready**: Complete deployment and monitoring setup
-
-Follow this guide step-by-step to create a production-quality editor app that integrates seamlessly with Fast Track.
+Follow this guide to implement a robust, production-ready editor integration with Fast Track using the redirect flow pattern.

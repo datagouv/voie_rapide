@@ -190,7 +190,22 @@
       <button type="button" onclick="window.print()" class="btn btn-secondary">
         🖨️ Imprimer cette page
       </button>
+      
+      <% if platform_callback_url.present? %>
+        <%= link_to platform_callback_url, class: "btn btn-outline" do %>
+          ← Retour à la plateforme
+        <% end %>
+      <% end %>
     </div>
+
+    <!-- Platform Integration Information -->
+    <% if platform_callback_url.present? %>
+      <div style="margin-top: 2rem; padding: 1rem; background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 0.5rem; text-align: center;">
+        <p style="margin: 0; color: #1e40af; font-size: 0.875rem;">
+          📱 Intégration plateforme détectée - Vous pouvez retourner à la plateforme d'origine
+        </p>
+      </div>
+    <% end %>
 
     <!-- Technical Information -->
     <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb; text-align: center;">

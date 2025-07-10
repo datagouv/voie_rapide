@@ -14,11 +14,11 @@ class Document < ApplicationRecord
   scope :by_category, ->(category) { where(categorie: category) }
   scope :for_market_type, ->(type) { where(type_marche: [nil, type]) }
 
-  # French scope names for compatibility with existing specs
-  scope :obligatoires, -> { where(obligatoire: true) }
-  scope :optionnels, -> { where(obligatoire: false) }
-  scope :par_categorie, ->(category) { where(categorie: category) }
-  scope :par_type_marche, ->(type) { where(type_marche: [nil, type]) }
+  # French scope names for compatibility with existing specs (using English scopes)
+  scope :obligatoires, -> { mandatory }
+  scope :optionnels, -> { optional }
+  scope :par_categorie, ->(category) { by_category(category) }
+  scope :par_type_marche, ->(type) { for_market_type(type) }
 
   # Combined scopes for market configuration
   scope :mandatory_for_market_type, ->(type) { mandatory.for_market_type(type).active }
