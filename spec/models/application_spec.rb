@@ -46,4 +46,65 @@ RSpec.describe Application, type: :model do
       expect(application.status).to eq('in_progress')
     end
   end
+
+  describe '#all_required_documents_attached?' do
+    let(:application) { create(:application) }
+    let(:required_document) { create(:document, :obligatoire) }
+    let(:optional_document) { create(:document) } # Default is optional (obligatoire: false)
+
+    before do
+      create(:public_market_configuration, public_market: application.public_market, document: required_document, required: true)
+      create(:public_market_configuration, public_market: application.public_market, document: optional_document, required: false)
+    end
+
+    context 'when no required documents exist' do
+      before do
+        application.public_market.public_market_configurations.where(required: true).destroy_all
+      end
+
+      it 'returns true' do
+        expect(application.all_required_documents_attached?).to be true
+      end
+    end
+
+    context 'when required documents exist but none are attached' do
+      it 'returns false' do
+        expect(application.all_required_documents_attached?).to be false
+      end
+    end
+
+    context 'when all required documents are attached' do
+      before do
+        # Simulate document attachment with correct filename format
+        application.documents.attach(
+          io: StringIO.new('test content'),
+          filename: "#{required_document.id}_#{application.siret}.pdf",
+          content_type: 'application/pdf'
+        )
+      end
+
+      it 'returns true' do
+        expect(application.all_required_documents_attached?).to be true
+      end
+    end
+
+    context 'when only some required documents are attached' do
+      let(:another_required_document) { create(:document, :obligatoire) }
+
+      before do
+        create(:public_market_configuration, public_market: application.public_market, document: another_required_document, required: true)
+
+        # Attach only one of the required documents
+        application.documents.attach(
+          io: StringIO.new('test content'),
+          filename: "#{required_document.id}_#{application.siret}.pdf",
+          content_type: 'application/pdf'
+        )
+      end
+
+      it 'returns false' do
+        expect(application.all_required_documents_attached?).to be false
+      end
+    end
+  end
 end

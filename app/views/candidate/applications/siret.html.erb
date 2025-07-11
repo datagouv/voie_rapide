@@ -97,10 +97,13 @@
   </div>
 </div>
 
-<script type="application/javascript" data-turbo-eval="false">
-  document.addEventListener('DOMContentLoaded', function() {
+<script type="application/javascript">
+  document.addEventListener('turbo:load', function() {
     const siretInput = document.getElementById('siret');
     const submitButton = document.getElementById('submit-siret');
+    
+    // Exit early if elements don't exist (we're on a different page)
+    if (!siretInput || !submitButton) return;
     
     function validateSiret(siret) {
       // Remove any spaces or special characters

@@ -16,6 +16,9 @@ fr:
     applications:
       invalid_siret: 'SIRET invalide. Veuillez saisir un SIRET de 14 chiffres.'
       incomplete_form: "Le formulaire n'est pas complet. Veuillez vérifier tous les champs requis."
+      data_saved: 'Données sauvegardées'
+      no_application_found: 'Aucune candidature trouvée.'
+      not_submitted_properly: "La candidature n'a pas été soumise correctement."
       
   editor_auth:
     invalid_client: 'Éditeur ou Client ID invalide'

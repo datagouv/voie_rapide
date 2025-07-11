@@ -155,7 +155,7 @@ RSpec.describe 'Candidate Flow', type: :request do
       # Try to submit without required fields
       post candidate_submit_path(fast_track_id: public_market.fast_track_id)
       expect(response).to redirect_to(candidate_form_path(fast_track_id: public_market.fast_track_id))
-      expect(flash[:error]).to include('formulaire n\'est pas complet')
+      expect(flash[:error]).to include('Votre candidature est incomplète')
     end
 
     it 'prevents submission without required documents' do
@@ -168,7 +168,7 @@ RSpec.describe 'Candidate Flow', type: :request do
 
       post candidate_submit_path(fast_track_id: public_market.fast_track_id)
       expect(response).to redirect_to(candidate_form_path(fast_track_id: public_market.fast_track_id))
-      expect(flash[:error]).to include('formulaire n\'est pas complet')
+      expect(flash[:error]).to include('Votre candidature est incomplète')
     end
   end
 end

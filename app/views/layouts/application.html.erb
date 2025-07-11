@@ -24,5 +24,17 @@
 
   <body>
     <%= yield %>
+    
+    <!-- Unregister any service workers that might be causing issues -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+            console.log('Unregistered service worker:', registration);
+          }
+        });
+      }
+    </script>
   </body>
 </html>

@@ -29,6 +29,7 @@ module Candidate
 
     def store_platform_callback
       session[:platform_callback_url] = params[:callback_url] if params[:callback_url].present?
+      session[:platform_state] = params[:state] if params[:state].present?
     end
 
     def handle_market_not_found

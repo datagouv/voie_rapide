@@ -40,16 +40,14 @@ module Candidate
 
     # Update application data
     def update
-      application_params = params.expect(
-        application: [:company_name, :email, :phone, :contact_person,
-                      { document_uploads: {} }]
-      )
+      log_update_debug_info
 
-      if @application.update(application_params)
-        # Handle file uploads
-        handle_document_uploads if params[:application][:document_uploads]
+      document_uploads = extract_document_uploads_from_params
+      clean_app_params = build_clean_application_params
 
-        render json: { success: true, message: 'Données sauvegardées' }
+      if @application.update(clean_app_params)
+        process_document_uploads(document_uploads)
+        render json: { success: true, message: I18n.t('candidate.applications.data_saved') }
       else
         render json: {
           success: false,
@@ -60,6 +58,8 @@ module Candidate
 
     # Submit application
     def submit
+      Rails.logger.info "Submitting application #{@application.id}"
+
       if @application.ready_for_submission?
         handle_application_submission
       else
@@ -69,11 +69,12 @@ module Candidate
 
     # Confirmation and download page
     def confirmation
-      @application = Application.find(session[:application_id])
+      return redirect_to_entry_if_no_application unless session[:application_id]
 
+      @application = Application.find(session[:application_id])
       return if @application&.submitted?
 
-      redirect_to candidate_form_path(fast_track_id: @public_market.fast_track_id)
+      redirect_to_form_if_not_submitted
     end
 
     # Download attestation PDF
@@ -144,10 +145,9 @@ module Candidate
       document_uploads.each do |document_id, file|
         next if file.blank?
 
-        document = Document.find(document_id)
         @application.documents.attach(
           io: file,
-          filename: "#{document.nom.parameterize}_#{@application.siret}.pdf",
+          filename: "#{document_id}_#{@application.siret}.pdf",
           content_type: 'application/pdf'
         )
       end
@@ -175,17 +175,50 @@ module Candidate
       result = Candidate::ApplicationSubmissionService.new(@application).submit!
 
       if result.success?
-        session[:application_id] = @application.id
-        redirect_to candidate_confirmation_path(fast_track_id: @public_market.fast_track_id)
+        handle_successful_submission
       else
-        flash[:error] = "Erreur lors de la soumission : #{result.error}"
-        redirect_to candidate_form_path(fast_track_id: @public_market.fast_track_id)
+        handle_failed_submission(result.error)
       end
     end
 
     def handle_incomplete_application
-      flash[:error] = I18n.t('candidate.applications.incomplete_form')
+      errors = []
+      errors << 'Email manquant' if @application.email.blank?
+      errors << 'Personne de contact manquante' if @application.contact_person.blank?
+      errors << 'Documents obligatoires manquants' unless @application.all_required_documents_attached?
+
+      flash[:error] = "Votre candidature est incomplète : #{errors.join(', ')}"
       redirect_to candidate_form_path(fast_track_id: @public_market.fast_track_id)
+    end
+
+    def handle_platform_callback
+      callback_params = build_callback_params
+      callback_url_with_params = "#{platform_callback_url}?#{callback_params.to_query}"
+
+      Rails.logger.info "Platform callback URL: #{callback_url_with_params}"
+      Rails.logger.info "Callback params: #{callback_params}"
+
+      clear_platform_session_data
+
+      # Force a full page redirect to avoid CORS issues
+      redirect_to callback_url_with_params, allow_other_host: true
+    end
+
+    def build_callback_params
+      params = {
+        fast_track_id: @public_market.fast_track_id,
+        siret: @application.siret,
+        status: 'completed',
+        company_name: @application.company_name,
+        submitted_at: @application.submitted_at.iso8601
+      }
+      params[:state] = session[:platform_state] if session[:platform_state].present?
+      params
+    end
+
+    def clear_platform_session_data
+      session.delete(:platform_callback_url)
+      session.delete(:platform_state)
     end
 
     def error_message_for(error_type)
@@ -203,6 +236,86 @@ module Candidate
       else
         'Une erreur inattendue s\'est produite.'
       end
+    end
+
+    # Extracted methods for update action complexity reduction
+
+    def log_update_debug_info
+      Rails.logger.debug { "Updating application #{@application.id}" }
+    end
+
+    def extract_document_uploads_from_params
+      app_params = params[:application] || {}
+      document_uploads = {}
+
+      app_params.each do |key, value|
+        key_str = key.to_s
+        document_uploads.merge!(extract_complete_document_upload(key_str, value))
+        document_uploads.merge!(extract_malformed_document_upload(key_str, value))
+      end
+
+      document_uploads
+    end
+
+    def extract_complete_document_upload(key_str, value)
+      return {} unless key_str.start_with?('document_uploads[') && key_str.end_with?(']')
+
+      match = key_str.match(/document_uploads\[(\d+)\]/)
+      return {} unless match
+
+      { match[1] => value }
+    end
+
+    def extract_malformed_document_upload(key_str, value)
+      return {} unless key_str.start_with?('document_uploads[') && !key_str.end_with?(']')
+
+      match = key_str.match(/document_uploads\[(\d+)/)
+      return {} unless match
+
+      document_id = match[1]
+      return {} unless (value.is_a?(Hash) || value.is_a?(ActionController::Parameters)) && value.key?(']')
+
+      { document_id => value[']'] }
+    end
+
+    def build_clean_application_params
+      app_params = params[:application] || {}
+      {
+        company_name: app_params[:company_name],
+        email: app_params[:email],
+        phone: app_params[:phone],
+        contact_person: app_params[:contact_person]
+      }.compact
+    end
+
+    def process_document_uploads(document_uploads)
+      return unless document_uploads.any?
+
+      # Store document_uploads in params for handle_document_uploads method
+      params[:application] ||= {}
+      params[:application][:document_uploads] = document_uploads
+      handle_document_uploads
+    end
+
+    def redirect_to_entry_if_no_application
+      flash[:error] = I18n.t('candidate.applications.no_application_found')
+      redirect_to candidate_entry_path(fast_track_id: @public_market.fast_track_id)
+    end
+
+    def redirect_to_form_if_not_submitted
+      flash[:error] = I18n.t('candidate.applications.not_submitted_properly')
+      redirect_to candidate_form_path(fast_track_id: @public_market.fast_track_id)
+    end
+
+    def handle_successful_submission
+      session[:application_id] = @application.id
+      redirect_to candidate_confirmation_path(fast_track_id: @public_market.fast_track_id)
+    end
+
+    def handle_failed_submission(error)
+      Rails.logger.error "Application submission failed: #{error}"
+      flash[:error] = "Erreur lors de la soumission : #{error}"
+      redirect_to candidate_form_path(fast_track_id: @public_market.fast_track_id)
     end
   end
 end

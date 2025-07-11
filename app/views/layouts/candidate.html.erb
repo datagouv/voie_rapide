@@ -291,5 +291,18 @@
         </p>
       </footer>
     </div>
+    
+    <!-- Disable service workers and clean up network issues -->
+    <script>
+      // Unregister any service workers
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+            console.log('Unregistered service worker:', registration);
+          }
+        });
+      }
+    </script>
   </body>
 </html>

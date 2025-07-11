@@ -49,15 +49,32 @@ class Application < ApplicationRecord
   end
 
   def all_required_documents_attached?
-    required_document_ids = public_market.public_market_configurations
-                                         .where(required: true)
-                                         .pluck(:document_id)
-
+    required_document_ids = required_document_ids_from_market
     return true if required_document_ids.empty?
+    return false unless documents.attached?
 
-    # Check if all required documents are attached
-    # This is a simplified check for MVP
-    documents.attached? && required_document_ids.count <= documents.count
+    attached_document_ids = extract_attached_document_ids
+    all_required_documents_present?(required_document_ids, attached_document_ids)
+  end
+
+  private
+
+  def required_document_ids_from_market
+    public_market.public_market_configurations
+                 .where(required: true)
+                 .pluck(:document_id)
+  end
+
+  def extract_attached_document_ids
+    # Get the document IDs from the attached filenames
+    # Filenames are in format: "document_id_siret.pdf"
+    documents.map do |doc|
+      doc.filename.to_s.split('_').first.to_i
+    end.uniq
+  end
+
+  def all_required_documents_present?(required_ids, attached_ids)
+    (required_ids - attached_ids).empty?
   end
 
   def submission_complete?

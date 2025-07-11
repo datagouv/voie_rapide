@@ -192,9 +192,40 @@
       </button>
       
       <% if platform_callback_url.present? %>
-        <%= link_to platform_callback_url, class: "btn btn-outline" do %>
-          ← Retour à la plateforme
-        <% end %>
+        <form method="get" action="<%= platform_callback_url %>" style="display: inline;" data-turbo="false" id="callback-form">
+          <input type="hidden" name="fast_track_id" value="<%= @public_market.fast_track_id %>">
+          <input type="hidden" name="siret" value="<%= @application.siret %>">
+          <input type="hidden" name="status" value="completed">
+          <input type="hidden" name="company_name" value="<%= @application.company_name %>">
+          <input type="hidden" name="submitted_at" value="<%= @application.submitted_at.iso8601 %>">
+          <% if session[:platform_state].present? %>
+            <input type="hidden" name="state" value="<%= session[:platform_state] %>">
+          <% end %>
+          <button type="submit" class="btn btn-outline" onclick="logCallbackDetails(event)">
+            ← Retour à la plateforme
+          </button>
+        </form>
+        
+        <script>
+          function logCallbackDetails(event) {
+            console.log('🚀 CALLBACK FORM SUBMISSION DEBUG');
+            const form = document.getElementById('callback-form');
+            const formData = new FormData(form);
+            const params = new URLSearchParams(formData);
+            
+            console.log('Form action:', form.action);
+            console.log('Form method:', form.method);
+            console.log('Parameters:');
+            for (let [key, value] of params) {
+              console.log(`  ${key}: ${value}`);
+            }
+            console.log('Full URL will be:', form.action + '?' + params.toString());
+            console.log('Browser will navigate to this URL in 1 second...');
+            
+            // Allow the form to submit normally
+            return true;
+          }
+        </script>
       <% end %>
     </div>
 
@@ -204,6 +235,50 @@
         <p style="margin: 0; color: #1e40af; font-size: 0.875rem;">
           📱 Intégration plateforme détectée - Vous pouvez retourner à la plateforme d'origine
         </p>
+      </div>
+      
+      <!-- Enhanced Debug callback information -->
+      <div style="margin-top: 1rem; padding: 1rem; background-color: #f0f0f0; border-radius: 0.5rem; font-size: 0.8rem; font-family: monospace;">
+        <strong>🔍 Callback Debug Information:</strong><br><br>
+        
+        <strong>URL & Routing:</strong><br>
+        Callback URL: <code><%= platform_callback_url %></code><br>
+        Form Action: <code><%= platform_callback_url %></code><br>
+        Form Method: GET<br><br>
+        
+        <strong>Session Data:</strong><br>
+        Platform State: <code><%= session[:platform_state] %></code><br>
+        Platform Callback URL: <code><%= session[:platform_callback_url] %></code><br>
+        Session ID: <code><%= session.id %></code><br><br>
+        
+        <strong>Application Data:</strong><br>
+        Fast Track ID: <code><%= @public_market.fast_track_id %></code><br>
+        Application SIRET: <code><%= @application.siret %></code><br>
+        Company Name: <code><%= @application.company_name %></code><br>
+        Submitted At: <code><%= @application.submitted_at.iso8601 %></code><br>
+        Status: <code>completed</code><br><br>
+        
+        <strong>All Form Parameters:</strong><br>
+        <code>
+        fast_track_id=<%= @public_market.fast_track_id %><br>
+        siret=<%= @application.siret %><br>
+        status=completed<br>
+        company_name=<%= @application.company_name %><br>
+        submitted_at=<%= @application.submitted_at.iso8601 %><br>
+        <% if session[:platform_state].present? %>state=<%= session[:platform_state] %><br><% end %>
+        </code><br>
+        
+        <strong>Expected Editor App Route:</strong><br>
+        <code>GET /candidate/fasttrack_callback</code><br><br>
+        
+        <strong>Environment:</strong><br>
+        Current Time: <code><%= Time.current.iso8601 %></code><br>
+        Rails Env: <code><%= Rails.env %></code><br>
+        Fast Track Host: <code><%= request.host_with_port %></code><br>
+        
+        <% if defined?(ENV['EDITOR_BASE_URL']) %>
+        Editor Base URL: <code><%= ENV['EDITOR_BASE_URL'] %></code><br>
+        <% end %>
       </div>
     <% end %>
 
@@ -218,8 +293,8 @@
   </div>
 </div>
 
-<script type="application/javascript" data-turbo-eval="false">
-  document.addEventListener('DOMContentLoaded', function() {
+<script type="application/javascript">
+  document.addEventListener('turbo:load', function() {
     // Auto-focus on download button
     const downloadButton = document.querySelector('a[href*="download_attestation"]');
     if (downloadButton) {
