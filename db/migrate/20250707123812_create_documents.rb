@@ -13,7 +13,7 @@ class CreateDocuments < ActiveRecord::Migration[8.0]
 
     add_index :documents, :categorie
     add_index :documents, :type_marche
-    add_index :documents, [:categorie, :type_marche]
+    add_index :documents, [ :categorie, :type_marche ]
     add_index :documents, :obligatoire
   end
 end

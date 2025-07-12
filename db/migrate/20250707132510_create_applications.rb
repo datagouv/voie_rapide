@@ -15,7 +15,7 @@ class CreateApplications < ActiveRecord::Migration[8.0]
     end
 
     add_index :applications, :siret
-    add_index :applications, [:public_market_id, :siret], unique: true
+    add_index :applications, [ :public_market_id, :siret ], unique: true
     add_index :applications, :submitted_at
     add_index :applications, :status
   end

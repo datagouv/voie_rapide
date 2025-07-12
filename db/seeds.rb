@@ -22,7 +22,7 @@ mandatory_docs = [
   {
     nom: "Déclaration sur l'honneur DUME",
     description: "Document unique de marché européen attestant que l'entreprise respecte les critères d'exclusion",
-    categorie: "administratif", 
+    categorie: "administratif",
     obligatoire: true,
     type_marche: nil
   },

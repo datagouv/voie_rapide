@@ -8,7 +8,7 @@ class CreateTenderConfigurations < ActiveRecord::Migration[8.0]
       t.timestamps
     end
 
-    add_index :tender_configurations, [:public_market_id, :document_id], unique: true
+    add_index :tender_configurations, [ :public_market_id, :document_id ], unique: true
     add_index :tender_configurations, :required
   end
 end

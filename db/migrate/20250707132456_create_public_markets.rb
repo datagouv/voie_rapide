@@ -14,6 +14,6 @@ class CreatePublicMarkets < ActiveRecord::Migration[8.0]
 
     add_index :public_markets, :fast_track_id, unique: true
     add_index :public_markets, :deadline
-    add_index :public_markets, [:editor_id, :created_at]
+    add_index :public_markets, [ :editor_id, :created_at ]
   end
 end
