@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_08_120721) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_12_123111) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -69,13 +69,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_08_120721) do
     t.string "nom", null: false
     t.text "description"
     t.boolean "obligatoire", default: false, null: false
-    t.string "categorie", null: false
     t.string "type_marche"
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["categorie", "type_marche"], name: "index_documents_on_categorie_and_type_marche"
-    t.index ["categorie"], name: "index_documents_on_categorie"
     t.index ["obligatoire"], name: "index_documents_on_obligatoire"
     t.index ["type_marche"], name: "index_documents_on_type_marche"
   end

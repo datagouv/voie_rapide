@@ -5,19 +5,6 @@ require 'rails_helper'
 RSpec.describe Document, type: :model do
   describe 'validations' do
     it { should validate_presence_of(:nom) }
-    it { should validate_presence_of(:categorie) }
-
-    it 'validates categorie inclusion' do
-      document = build(:document, categorie: 'invalid_category')
-      expect(document).not_to be_valid
-    end
-
-    it 'accepts valid categories' do
-      %w[administratif technique financier juridique].each do |categorie|
-        document = build(:document, categorie: categorie)
-        expect(document).to be_valid
-      end
-    end
   end
 
   describe 'associations' do
@@ -49,13 +36,6 @@ RSpec.describe Document, type: :model do
       it 'returns only active documents' do
         expect(described_class.active).to include(active_document)
         expect(described_class.active).not_to include(inactive_document)
-      end
-    end
-
-    describe '.par_categorie' do
-      it 'returns documents for specific category' do
-        document = create(:document, categorie: 'technique')
-        expect(described_class.par_categorie('technique')).to include(document)
       end
     end
 

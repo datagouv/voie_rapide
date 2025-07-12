@@ -4,7 +4,6 @@ module Buyer
   # Controller for market configuration flow
   # Handles the two-step process: market type selection and document configuration
   class MarketConfigurationsController < BaseController
-    before_action :configure_iframe_response
     before_action :set_market_configuration, only: %i[documents create confirm]
     before_action :validate_market_type, only: %i[create]
     before_action :store_callback_params, only: %i[new]

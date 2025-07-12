@@ -5,24 +5,11 @@ FactoryBot.define do
     sequence(:nom) { |n| "Document #{n}" }
     description { 'Description du document' }
     obligatoire { false }
-    categorie { 'administrative' }
     type_marche { nil }
     active { true }
 
     trait :obligatoire do
       obligatoire { true }
-    end
-
-    trait :technical do
-      categorie { 'technical' }
-    end
-
-    trait :financial do
-      categorie { 'financial' }
-    end
-
-    trait :legal do
-      categorie { 'legal' }
     end
 
     trait :for_services do

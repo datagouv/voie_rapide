@@ -5,19 +5,15 @@ class Document < ApplicationRecord
   has_many :public_markets, through: :public_market_configurations
 
   validates :nom, presence: true
-  validates :categorie, presence: true
-  validates :categorie, inclusion: { in: %w[administrative technical financial legal administratif technique financier juridique] }
 
   scope :mandatory, -> { where(obligatoire: true) }
   scope :optional, -> { where(obligatoire: false) }
   scope :active, -> { where(active: true) }
-  scope :by_category, ->(category) { where(categorie: category) }
   scope :for_market_type, ->(type) { where(type_marche: [nil, type]) }
 
   # French scope names for compatibility with existing specs (using English scopes)
   scope :obligatoires, -> { mandatory }
   scope :optionnels, -> { optional }
-  scope :par_categorie, ->(category) { by_category(category) }
   scope :par_type_marche, ->(type) { for_market_type(type) }
 
   # Combined scopes for market configuration

@@ -71,12 +71,6 @@ module Buyer
       )
     end
 
-    # Configure redirect-friendly responses
-    def configure_iframe_response
-      response.headers['X-Frame-Options'] = 'DENY'
-      response.headers['Content-Security-Policy'] = "frame-ancestors 'none'"
-    end
-
     # Handle OAuth errors gracefully
     def doorkeeper_unauthorized_render_options(error:)
       {
