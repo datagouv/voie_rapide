@@ -17,11 +17,8 @@ module Buyer
         return
       end
 
-      @market_configuration = MarketConfigurationSession.new
-      @market_types = available_market_types
-
+      initialize_market_configuration_with_params
       log_buyer_action('market_configuration_started')
-
       render :market_type_selection
     end
 
@@ -264,6 +261,19 @@ module Buyer
       session[:oauth_access_token] = clean_token
       Rails.logger.info 'Stored access token in session for redirect flow'
 
+      # Store pre-filled market data in session before redirect
+      if params[:title].present? || params[:description].present? || params[:deadline].present?
+        initial_attributes = {}
+        initial_attributes[:title] = params[:title] if params[:title].present?
+        initial_attributes[:description] = params[:description] if params[:description].present?
+        initial_attributes[:deadline] = DateTime.parse(params[:deadline]) if params[:deadline].present?
+
+        # Merge with existing session data if any
+        existing_config = session[:market_configuration] || {}
+        session[:market_configuration] = existing_config.merge(initial_attributes)
+        Rails.logger.info "Stored pre-filled market data: #{initial_attributes.inspect}"
+      end
+
       # Redirect to clean URL without token parameter (callback params already stored by before_action)
       Rails.logger.info "Session after token storage: #{session.to_h.inspect}"
       Rails.logger.info "Platform callback in session: #{session[:platform_callback].inspect}"
@@ -282,6 +292,29 @@ module Buyer
       Rails.logger.info "Session ID: #{session.id}"
       Rails.logger.info "All session keys: #{session.keys.inspect}"
       Rails.logger.info "Session data: #{session.to_h.inspect}"
+    end
+
+    def initialize_market_configuration_with_params
+      # Initialize with data from editor app if provided
+      initial_attributes = extract_initial_attributes_from_params
+      @market_configuration = MarketConfigurationSession.new(initial_attributes)
+      @market_types = available_market_types
+
+      # Store pre-filled data in session to preserve across steps
+      store_initial_attributes_in_session(initial_attributes) if initial_attributes.any?
+    end
+
+    def extract_initial_attributes_from_params
+      initial_attributes = {}
+      initial_attributes[:title] = params[:title] if params[:title].present?
+      initial_attributes[:description] = params[:description] if params[:description].present?
+      initial_attributes[:deadline] = DateTime.parse(params[:deadline]) if params[:deadline].present?
+      initial_attributes
+    end
+
+    def store_initial_attributes_in_session(initial_attributes)
+      session[:market_configuration] = @market_configuration.to_h
+      Rails.logger.info "Pre-filled market configuration with: #{initial_attributes.inspect}"
     end
     # rubocop:enable Metrics/AbcSize
   end
