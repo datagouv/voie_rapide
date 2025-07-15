@@ -3,7 +3,7 @@
 Rails.application.routes.draw do
   use_doorkeeper
 
-  # Admin routes - Editor management for development
+  # Admin routes - Editor management
   namespace :admin do
     resources :editors do
       member do

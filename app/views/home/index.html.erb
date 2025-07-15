@@ -1,7 +1,7 @@
-<% content_for :title, "Fast Track - Développement" %>
+<% content_for :title, "Fast Track - Administration" %>
 
 <div class="welcome-header">
-  <h1>🚀 Fast Track - Environnement de Développement</h1>
+  <h1>🚀 Fast Track - Interface d'Administration</h1>
   <p class="subtitle">Plateforme de candidature simplifiée pour les marchés publics</p>
 </div>
 
@@ -41,7 +41,6 @@
           <strong><%= current_editor.name %></strong> (Client ID: <code><%= current_editor.client_id %></code>)
         </p>
         <div style="margin-top: 1rem;">
-          <%= link_to "Tester OAuth", "/oauth/authorize?client_id=#{current_editor.client_id}&redirect_uri=#{CGI.escape(current_editor.callback_url)}&response_type=code&scope=market_config", class: "btn btn-primary", style: "margin-right: 1rem;" %>
           <%= link_to "Se déconnecter", editor_logout_path, method: :delete, class: "btn btn-outline-secondary" %>
         </div>
       </div>
@@ -66,12 +65,6 @@
         <h3>👥 Gestion des Éditeurs</h3>
         <p>Créer et configurer des éditeurs avec OAuth2 pour tester l'intégration Fast Track.</p>
         <%= link_to "Gérer les éditeurs", admin_editors_path, class: "btn btn-primary" %>
-      </div>
-      
-      <div class="action-card">
-        <h3>🏢 Configuration de Marché</h3>
-        <p>Tester le flow acheteur complet : type de marché, documents, et génération d'ID Fast Track.</p>
-        <%= link_to "Tester la configuration", new_buyer_market_configuration_path, class: "btn btn-outline-primary" %>
       </div>
       
       <div class="action-card">
