@@ -1,0 +1,6 @@
+<%- submit_btn_css ||= 'btn btn-sm btn-outline-danger' %>
+<%= form_tag oauth_application_path(application), method: :delete do %>
+  <%= submit_tag "Supprimer",
+                 onclick: "return confirm('Êtes-vous sûr de vouloir supprimer cette application ?')",
+                 class: submit_btn_css %>
+<% end %>

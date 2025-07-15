@@ -1,0 +1,272 @@
+<% content_for :title, "Applications OAuth" %>
+
+<div class="page-header">
+  <h2>Applications OAuth</h2>
+  <p class="subtitle">Gérez les applications OAuth2 pour l'intégration avec les éditeurs</p>
+</div>
+
+<div class="actions-section">
+  <%= link_to "Nouvelle Application", new_oauth_application_path, class: "btn btn-primary" %>
+</div>
+
+<div class="applications-section">
+  <% if @applications.any? %>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>URL de callback</th>
+            <th>Type</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @applications.each do |application| %>
+            <tr id="application_<%= application.id %>">
+              <td>
+                <strong><%= link_to application.name, oauth_application_path(application), class: "app-link" %></strong>
+              </td>
+              <td>
+                <code class="redirect-uri"><%= application.redirect_uri %></code>
+              </td>
+              <td>
+                <span class="badge <%= application.confidential? ? 'badge-success' : 'badge-warning' %>">
+                  <%= application.confidential? ? "Confidentielle" : "Publique" %>
+                </span>
+              </td>
+              <td>
+                <div class="action-buttons">
+                  <%= link_to "Modifier", edit_oauth_application_path(application), class: "btn btn-sm btn-outline-primary" %>
+                  <%= render 'delete_form', application: application %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% else %>
+    <div class="empty-state">
+      <p>Aucune application OAuth configurée.</p>
+      <p>Les applications OAuth permettent aux éditeurs de s'intégrer avec Fast Track.</p>
+    </div>
+  <% end %>
+</div>
+
+<style>
+  .page-header {
+    margin-bottom: 2rem;
+  }
+
+  .page-header h2 {
+    font-size: 2rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: #111827;
+  }
+
+  .subtitle {
+    color: #6b7280;
+    margin: 0;
+  }
+
+  .actions-section {
+    margin-bottom: 2rem;
+  }
+
+  .applications-section {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .data-table th {
+    text-align: left;
+    padding: 0.75rem;
+    border-bottom: 2px solid #e5e7eb;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .data-table td {
+    padding: 1rem 0.75rem;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .data-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .app-link {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .app-link:hover {
+    text-decoration: underline;
+  }
+
+  .redirect-uri {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.875rem;
+    background-color: #f3f4f6;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    display: inline-block;
+  }
+
+  .badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .badge-success {
+    background-color: #d1fae5;
+    color: #065f46;
+  }
+
+  .badge-warning {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #6b7280;
+  }
+
+  .empty-state p {
+    margin: 0.5rem 0;
+  }
+
+  .admin-header {
+    background-color: #1f2937;
+    color: white;
+    padding: 1rem 0;
+    margin-bottom: 2rem;
+  }
+
+  .navbar-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .navbar-content h1 {
+    margin: 0;
+    font-size: 1.5rem;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  .nav-link {
+    color: #d1d5db;
+    text-decoration: none;
+    font-weight: 500;
+  }
+
+  .nav-link:hover {
+    color: white;
+  }
+
+  .nav-link.active {
+    color: white;
+    border-bottom: 2px solid white;
+  }
+
+  .admin-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+
+  .alert {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .alert-info {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+  }
+
+  .alert-danger {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+  }
+
+  .btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    font-weight: 500;
+    text-align: center;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.875rem;
+  }
+
+  .btn-primary {
+    background-color: #2563eb;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: #1d4ed8;
+  }
+
+  .btn-outline-primary {
+    border-color: #2563eb;
+    color: #2563eb;
+    background: white;
+  }
+
+  .btn-outline-primary:hover {
+    background-color: #2563eb;
+    color: white;
+  }
+
+  .btn-outline-danger {
+    border-color: #dc2626;
+    color: #dc2626;
+    background: white;
+  }
+
+  .btn-outline-danger:hover {
+    background-color: #dc2626;
+    color: white;
+  }
+</style>
