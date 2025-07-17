@@ -16,7 +16,7 @@ default: &default
   adapter: postgresql
   encoding: unicode
   username: <%= ENV['DATABASE_USER'] || 'voie_rapide' %>
-  password: <%= ENV['DATABASE_PASSWORD'] || 'voie_rapide'%>
+  password: <%= ENV['DATABASE_PASSWORD'] || 'wow*veryrapide'%>
   host: localhost
   database: <%= ENV['DATABASE_DB'] || 'voie_rapide' %>
   pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>

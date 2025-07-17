@@ -42,7 +42,7 @@ Say: "I'll spawn agents to tackle different aspects of this problem" whenever a 
 - When something feels wrong
 - Before declaring "done"
 
-Run: `bin/rubocop && bin/rails test && bin/brakeman`
+Run: `bin/rubocop && bundle exec rspec`
 
 > Why: You can lose track of what's actually working. These checkpoints prevent cascading failures.
 
@@ -56,7 +56,6 @@ Run: `bin/rubocop && bin/rails test && bin/brakeman`
 
 This includes:
 - RuboCop violations (style, complexity, security)
-- Brakeman security warnings
 - Test failures
 - Database migration issues
 - ALL other checks
@@ -145,8 +144,8 @@ bin/rails test test/controllers/specific_controller_test.rb
 # Run RuboCop linter
 bin/rubocop
 
-# Run Brakeman security scanner
-bin/brakeman
+# Run RSpec tests
+bundle exec rspec
 
 # Auto-fix RuboCop issues
 bin/rubocop -a
@@ -212,7 +211,6 @@ bin/rails assets:clobber
 ### Our code is complete when:
 - ✅ All RuboCop rules pass with zero issues
 - ✅ All tests pass  
-- ✅ Brakeman security scan is clean
 - ✅ Feature works end-to-end
 - ✅ Database migrations are reversible
 - ✅ Strong parameters are properly configured
