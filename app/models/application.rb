@@ -4,7 +4,7 @@ class Application < ApplicationRecord
   belongs_to :public_market
   has_many_attached :documents
 
-  validates :siret, presence: true, format: { with: /\A\d{14}\z/ }
+  validates :siret, presence: true, format: { with: /\A\d{14}\z/, message: 'must contain exactly 14 digits' }
   validates :company_name, presence: true
   validates :public_market_id, uniqueness: { scope: :siret }
   validates :status, inclusion: { in: %w[in_progress submitted] }

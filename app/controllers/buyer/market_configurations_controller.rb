@@ -177,8 +177,8 @@ module Buyer
       return if params[:callback_url].blank?
 
       session[:platform_callback] = {
-        url: params[:callback_url],
-        state: params[:state]
+        'url' => params[:callback_url],
+        'state' => params[:state]
       }
       log_callback_storage
     end
@@ -264,9 +264,16 @@ module Buyer
       # Store pre-filled market data in session before redirect
       if params[:title].present? || params[:description].present? || params[:deadline].present?
         initial_attributes = {}
-        initial_attributes[:title] = params[:title] if params[:title].present?
-        initial_attributes[:description] = params[:description] if params[:description].present?
-        initial_attributes[:deadline] = DateTime.parse(params[:deadline]) if params[:deadline].present?
+        initial_attributes['title'] = params[:title] if params[:title].present?
+        initial_attributes['description'] = params[:description] if params[:description].present?
+        if params[:deadline].present?
+          begin
+            initial_attributes['deadline'] = DateTime.parse(params[:deadline])
+          rescue Date::Error
+            Rails.logger.warn "Invalid deadline format: #{params[:deadline]}"
+            # Skip invalid deadline, don't store it
+          end
+        end
 
         # Merge with existing session data if any
         existing_config = session[:market_configuration] || {}
@@ -306,9 +313,9 @@ module Buyer
 
     def extract_initial_attributes_from_params
       initial_attributes = {}
-      initial_attributes[:title] = params[:title] if params[:title].present?
-      initial_attributes[:description] = params[:description] if params[:description].present?
-      initial_attributes[:deadline] = DateTime.parse(params[:deadline]) if params[:deadline].present?
+      initial_attributes['title'] = params[:title] if params[:title].present?
+      initial_attributes['description'] = params[:description] if params[:description].present?
+      initial_attributes['deadline'] = DateTime.parse(params[:deadline]) if params[:deadline].present?
       initial_attributes
     end
 
