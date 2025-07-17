@@ -11,9 +11,9 @@ RSpec.describe 'Home', type: :request do
 
     it 'displays the Fast Track test message' do
       get '/'
-      expect(response.body).to include('Voie Rapide - Fast Track')
-      expect(response.body).to include('Fast Track test page is working!')
-      expect(response.body).to include('foundation for our Fast Track procurement application')
+      expect(response.body).to include('Voie Rapide')
+      expect(response.body).to include('La plateforme de candidature simplifiée aux marchés publics')
+      expect(response.body).to include('Facilitez vos démarches administratives')
     end
 
     it 'includes DSFR header and footer' do

@@ -1,0 +1,48 @@
+# frozen_string_literal: true
+
+fr:
+  application:
+    name: "Voie Rapide"
+    title: "Voie Rapide"
+    
+  header:
+    home_title: "Accueil - Voie Rapide"
+    service_title: "Voie Rapide"
+    service_tagline: "Simplifiez vos candidatures aux marchés publics"
+    logo_alt: "République Française"
+    
+  footer:
+    description: "Voie Rapide facilite l'accès des PME aux marchés publics français."
+    links:
+      accessibility: "Accessibilité : non conforme"
+      legal: "Mentions légales"
+      privacy: "Données personnelles"
+      cookies: "Gestion des cookies"
+      
+  home:
+    title: "Voie Rapide"
+    subtitle: "La plateforme de candidature simplifiée aux marchés publics"
+    description: "Facilitez vos démarches administratives pour répondre aux appels d'offres publics."
+    
+    welcome:
+      text: "Bienvenue sur %{app_name}, la plateforme qui simplifie l'accès des petites et moyennes entreprises aux marchés publics français. Réduisez le temps consacré aux formalités administratives et concentrez-vous sur votre expertise métier."
+      
+    features:
+      title: "Fonctionnalités principales"
+      siret: "Identification SIRET automatique"
+      documents: "Gestion documentaire intégrée"
+      attestations: "Attestations officielles PDF"
+      integration: "Intégration plateforme d'achat"
+      
+    workflow:
+      title: "Comment ça marche ?"
+      steps:
+        identification:
+          title: "1. Identification"
+          description: "Identifiez-vous avec votre numéro SIRET"
+        documents:
+          title: "2. Documents"
+          description: "Téléchargez vos documents administratifs"
+        candidature:
+          title: "3. Candidature"
+          description: "Recevez votre attestation de candidature"
