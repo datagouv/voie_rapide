@@ -152,30 +152,23 @@
         <div class="integration-example">
           <h4>Exemple d'intégration (JavaScript)</h4>
           <div class="code-block code-example">
-<pre><code>// 1. Rediriger vers Fast Track pour OAuth
-window.location.href = '/oauth/authorize?' + new URLSearchParams({
-  client_id: '<%= @editor.client_id %>',
-  redirect_uri: '<%= @doorkeeper_app.redirect_uri %>',
-  response_type: 'code',
-  scope: 'market_config'
-});
-
-// 2. Échanger le code contre un token
+<pre><code>// 1. Obtenir un token d'accès via client_credentials flow
 const tokenResponse = await fetch('/oauth/token', {
   method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    grant_type: 'authorization_code',
+  headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  body: new URLSearchParams({
+    grant_type: 'client_credentials',
     client_id: '<%= @editor.client_id %>',
     client_secret: '<%= @editor.client_secret %>',
-    code: authorizationCode,
-    redirect_uri: '<%= @doorkeeper_app.redirect_uri %>'
+    scope: 'app_market_config'
   })
 });
 
-// 3. Ouvrir Fast Track avec le token
+const { access_token } = await tokenResponse.json();
+
+// 2. Ouvrir Fast Track avec le token
 const iframe = document.createElement('iframe');
-iframe.src = '/buyer/market_configurations/new?access_token=' + accessToken;
+iframe.src = '/buyer/market_configurations/new?access_token=' + access_token;
 document.body.appendChild(iframe);</code></pre>
           </div>
         </div>

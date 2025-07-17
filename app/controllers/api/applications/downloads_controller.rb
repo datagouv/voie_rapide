@@ -93,16 +93,8 @@ module Api
       end
 
       def doorkeeper_authorize_for_app_access!
-        # Use different scopes based on the token scopes
-        # If token has app_* scopes, it's from client_credentials flow
-        # If token has regular scopes, it's from authorization_code flow
-        if doorkeeper_token&.scopes&.include?('app_application_read')
-          # Client credentials flow (app-to-app)
-          doorkeeper_authorize! :app_application_read
-        else
-          # Authorization code flow (user-interactive)
-          doorkeeper_authorize! :application_read
-        end
+        # Using client_credentials flow for automated app-to-app authentication
+        doorkeeper_authorize! :app_application_read
       end
     end
   end

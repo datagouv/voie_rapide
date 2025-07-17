@@ -6,7 +6,7 @@ FactoryBot.define do
     sequence(:uid) { |n| "uid_#{n}_#{SecureRandom.hex(16)}" }
     sequence(:secret) { |n| "secret_#{n}_#{SecureRandom.hex(32)}" }
     redirect_uri { 'https://localhost:4000/callback' }
-    scopes { 'market_config market_read application_read' }
+    scopes { 'app_market_config app_market_read app_application_read' }
     confidential { true }
 
     trait :public do
@@ -14,7 +14,7 @@ FactoryBot.define do
     end
 
     trait :with_limited_scopes do
-      scopes { 'market_read' }
+      scopes { 'app_market_read' }
     end
   end
 end

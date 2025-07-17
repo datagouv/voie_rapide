@@ -252,9 +252,9 @@ Doorkeeper.configure do
   # enable_application_owner confirmation: false
 
   # Define access token scopes for your provider
-  # For market configuration and application management
-  default_scopes  :market_config
-  optional_scopes :market_read, :application_read, :app_market_config, :app_market_read, :app_application_read
+  # For automated app-to-app authentication only
+  default_scopes  :app_market_config
+  optional_scopes :app_market_read, :app_application_read
 
   # Allows to restrict only certain scopes for grant_type.
   # By default, all the scopes will be available for all the grant types.
@@ -263,11 +263,8 @@ Doorkeeper.configure do
   # values should be the array of scopes for that grant type.
   # Note: scopes should be from configured_scopes (i.e. default or optional)
   #
-  # Separate scopes for different grant types:
-  # - authorization_code: User-interactive flows (legacy)
-  # - client_credentials: Automated app-to-app authentication
-  scopes_by_grant_type authorization_code: %i[market_config market_read application_read],
-                       client_credentials: %i[app_market_config app_market_read app_application_read]
+  # Scopes for automated app-to-app authentication only
+  scopes_by_grant_type client_credentials: %i[app_market_config app_market_read app_application_read]
 
   # Forbids creating/updating applications with arbitrary scopes that are
   # not in configuration, i.e. +default_scopes+ or +optional_scopes+.
@@ -363,10 +360,8 @@ Doorkeeper.configure do
   # custom_introspection_response CustomIntrospectionResponder
 
   # Specify what grant flows are enabled in array of Strings.
-  # For editor-to-editor authentication, we support:
-  # - authorization_code: For user-interactive flows (legacy)
-  # - client_credentials: For automated app-to-app authentication
-  grant_flows %w[authorization_code client_credentials]
+  # For automated app-to-app authentication only
+  grant_flows %w[client_credentials]
 
   # Allows to customize OAuth grant flows that +each+ application support.
   # You can configure a custom block (or use a class respond to `#call`) that must

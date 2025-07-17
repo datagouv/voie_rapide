@@ -5,7 +5,7 @@ require 'rails_helper'
 RSpec.describe Buyer::MarketConfigurationsController, type: :controller do
   let(:application) { create(:oauth_application) }
   let(:editor) { create(:editor, :authorized_and_active, client_id: application.uid) }
-  let(:access_token) { create(:access_token, application: application, scopes: 'market_config') }
+  let(:access_token) { create(:access_token, application: application, scopes: 'app_market_config') }
 
   describe 'GET #new with auto-fill parameters' do
     before do

@@ -1,7 +1,10 @@
 # frozen_string_literal: true
 
 Rails.application.routes.draw do
-  use_doorkeeper
+  # Custom Doorkeeper routes - only for client_credentials flow
+  use_doorkeeper do
+    skip_controllers :authorizations, :authorized_applications
+  end
 
   # Admin routes - Editor management
   namespace :admin do

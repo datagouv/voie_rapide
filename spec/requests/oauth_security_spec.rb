@@ -23,7 +23,7 @@ RSpec.describe 'OAuth Security', type: :request do
 
         valid_token = create(:access_token,
                              application: application,
-                             scopes: 'market_config')
+                             scopes: 'app_market_config')
 
         get '/buyer/market_configurations/new',
             params: base_params.merge(access_token: valid_token.token)
@@ -32,13 +32,13 @@ RSpec.describe 'OAuth Security', type: :request do
         expect(response).to redirect_to(new_buyer_market_configuration_path)
       end
 
-      it 'accepts token with multiple scopes including market_config' do
+      it 'accepts token with multiple scopes including app_market_config' do
         # Ensure editor exists before creating token
         editor
 
         multi_scope_token = create(:access_token,
                                    application: application,
-                                   scopes: 'market_config market_read application_read')
+                                   scopes: 'app_market_config app_market_read app_application_read')
 
         get '/buyer/market_configurations/new',
             params: base_params.merge(access_token: multi_scope_token.token)
@@ -92,7 +92,7 @@ RSpec.describe 'OAuth Security', type: :request do
       it 'rejects expired token' do
         expired_token = create(:access_token,
                                application: application,
-                               scopes: 'market_config',
+                               scopes: 'app_market_config',
                                expires_in: -3600)
 
         get '/buyer/market_configurations/new',
@@ -104,7 +104,7 @@ RSpec.describe 'OAuth Security', type: :request do
       it 'rejects token that expires soon' do
         soon_expired_token = create(:access_token,
                                     application: application,
-                                    scopes: 'market_config',
+                                    scopes: 'app_market_config',
                                     expires_in: 1)
 
         # Wait for token to expire
@@ -129,10 +129,10 @@ RSpec.describe 'OAuth Security', type: :request do
         expect(response).to have_http_status(:forbidden)
       end
 
-      it 'rejects token with application_read scope only' do
+      it 'rejects token with app_application_read scope only' do
         app_read_token = create(:access_token,
                                 application: application,
-                                scopes: 'application_read')
+                                scopes: 'app_application_read')
 
         get '/buyer/market_configurations/new',
             params: base_params.merge(access_token: app_read_token.token)
@@ -156,7 +156,7 @@ RSpec.describe 'OAuth Security', type: :request do
       it 'rejects revoked token' do
         revoked_token = create(:access_token,
                                application: application,
-                               scopes: 'market_config')
+                               scopes: 'app_market_config')
         revoked_token.revoke
 
         get '/buyer/market_configurations/new',
@@ -174,7 +174,7 @@ RSpec.describe 'OAuth Security', type: :request do
 
       valid_token = create(:access_token,
                            application: application,
-                           scopes: 'market_config')
+                           scopes: 'app_market_config')
 
       get '/buyer/market_configurations/new',
           params: base_params.merge(access_token: valid_token.token)
@@ -192,7 +192,7 @@ RSpec.describe 'OAuth Security', type: :request do
 
       other_token = create(:access_token,
                            application: other_app,
-                           scopes: 'market_config')
+                           scopes: 'app_market_config')
 
       get '/buyer/market_configurations/new',
           params: base_params.merge(access_token: other_token.token)
@@ -206,7 +206,7 @@ RSpec.describe 'OAuth Security', type: :request do
     it 'includes proper security headers' do
       valid_token = create(:access_token,
                            application: application,
-                           scopes: 'market_config')
+                           scopes: 'app_market_config')
 
       get '/buyer/market_configurations/new',
           params: base_params.merge(access_token: valid_token.token)
@@ -233,7 +233,7 @@ RSpec.describe 'OAuth Security', type: :request do
 
       valid_token = create(:access_token,
                            application: application,
-                           scopes: 'market_config')
+                           scopes: 'app_market_config')
 
       # Make multiple requests
       5.times do
@@ -262,7 +262,7 @@ RSpec.describe 'OAuth Security', type: :request do
 
       valid_token = create(:access_token,
                            application: application,
-                           scopes: 'market_config')
+                           scopes: 'app_market_config')
 
       # Should work without CSRF token since it's an API endpoint
       get '/buyer/market_configurations/new',
@@ -279,7 +279,7 @@ RSpec.describe 'OAuth Security', type: :request do
 
       valid_token = create(:access_token,
                            application: application,
-                           scopes: 'market_config')
+                           scopes: 'app_market_config')
 
       malicious_inputs = [
         "'; DROP TABLE markets; --",

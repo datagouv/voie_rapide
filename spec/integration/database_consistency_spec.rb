@@ -6,7 +6,7 @@ RSpec.describe 'Database Consistency', type: :request do
   describe 'Cross-application data integrity' do
     let(:application) { create(:oauth_application) }
     let(:editor) { create(:editor, :authorized_and_active, client_id: application.uid) }
-    let(:access_token) { create(:access_token, application: application, scopes: 'market_config') }
+    let(:access_token) { create(:access_token, application: application, scopes: 'app_market_config') }
 
     it 'maintains data consistency between editor and fast track' do
       # Simulate editor app creating market
@@ -46,7 +46,7 @@ RSpec.describe 'Database Consistency', type: :request do
 
       5.times do |i|
         threads << Thread.new do
-          token = create(:access_token, application: application, scopes: 'market_config')
+          token = create(:access_token, application: application, scopes: 'app_market_config')
 
           get '/buyer/market_configurations/new', params: {
             access_token: token.token,
@@ -84,7 +84,7 @@ RSpec.describe 'Database Consistency', type: :request do
 
       # Create tokens
       5.times do
-        create(:access_token, application: application, scopes: 'market_config')
+        create(:access_token, application: application, scopes: 'app_market_config')
       end
 
       expect(Doorkeeper::AccessToken.count).to eq(initial_count + 5)
@@ -115,7 +115,7 @@ RSpec.describe 'Database Consistency', type: :request do
 
       short_lived_token = create(:access_token,
                                  application: application,
-                                 scopes: 'market_config',
+                                 scopes: 'app_market_config',
                                  expires_in: 1)
 
       # Use token before expiration
@@ -150,7 +150,7 @@ RSpec.describe 'Database Consistency', type: :request do
   describe 'Session management' do
     let(:application) { create(:oauth_application) }
     let(:editor) { create(:editor, :authorized_and_active, client_id: application.uid) }
-    let(:access_token) { create(:access_token, application: application, scopes: 'market_config') }
+    let(:access_token) { create(:access_token, application: application, scopes: 'app_market_config') }
 
     it 'maintains session isolation between requests' do
       # Make first request
@@ -193,7 +193,7 @@ RSpec.describe 'Database Consistency', type: :request do
   describe 'Cache management' do
     let(:application) { create(:oauth_application) }
     let(:editor) { create(:editor, :authorized_and_active, client_id: application.uid) }
-    let(:access_token) { create(:access_token, application: application, scopes: 'market_config') }
+    let(:access_token) { create(:access_token, application: application, scopes: 'app_market_config') }
 
     around do |example|
       # Temporarily use memory store for cache tests
@@ -249,7 +249,7 @@ RSpec.describe 'Database Consistency', type: :request do
   describe 'Data validation consistency' do
     let(:application) { create(:oauth_application) }
     let(:editor) { create(:editor, :authorized_and_active, client_id: application.uid) }
-    let(:access_token) { create(:access_token, application: application, scopes: 'market_config') }
+    let(:access_token) { create(:access_token, application: application, scopes: 'app_market_config') }
 
     it 'enforces consistent validation rules' do
       # Test with invalid data

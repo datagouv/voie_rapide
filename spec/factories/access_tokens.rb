@@ -4,7 +4,7 @@ FactoryBot.define do
   factory :access_token, class: 'Doorkeeper::AccessToken' do
     association :application, factory: :oauth_application
     sequence(:token) { |n| "token_#{n}_#{SecureRandom.hex(32)}" }
-    scopes { 'market_config' }
+    scopes { 'app_market_config' }
     expires_in { 7200 }
 
     trait :expired do
@@ -12,11 +12,11 @@ FactoryBot.define do
     end
 
     trait :with_read_scope do
-      scopes { 'market_read' }
+      scopes { 'app_market_read' }
     end
 
     trait :with_multiple_scopes do
-      scopes { 'market_config market_read application_read' }
+      scopes { 'app_market_config app_market_read app_application_read' }
     end
 
     trait :revoked do
