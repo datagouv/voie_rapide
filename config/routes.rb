@@ -40,9 +40,21 @@ Rails.application.routes.draw do
 
   # API routes - OAuth protected access for editor platforms
   namespace :api do
+    namespace :v1 do
+      namespace :oauth do
+        post 'app_token', to: 'app_authentication#create'
+        post 'refresh_token', to: 'app_authentication#refresh'
+        get 'app_status', to: 'app_authentication#status'
+      end
+    end
+
     namespace :applications do
       get 'download_attestation', to: 'downloads#attestation'
       get 'download_dossier_zip', to: 'downloads#dossier_zip'
+
+      # OPTIONS routes for CORS preflight requests
+      options 'download_attestation', to: 'downloads#cors_preflight'
+      options 'download_dossier_zip', to: 'downloads#cors_preflight'
     end
   end
 

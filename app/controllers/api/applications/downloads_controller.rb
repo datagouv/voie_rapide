@@ -4,9 +4,9 @@ module Api
   module Applications
     # OAuth-protected downloads for editor platforms
     class DownloadsController < ApplicationController
-      before_action :doorkeeper_authorize!
-      before_action :find_application
-      before_action :verify_editor_access
+      before_action :doorkeeper_authorize_for_app_access!, except: [:cors_preflight]
+      before_action :find_application, except: [:cors_preflight]
+      before_action :verify_editor_access, except: [:cors_preflight]
 
       # Download attestation PDF - OAuth protected
       def attestation
@@ -36,6 +36,11 @@ module Api
                   filename: "dossier_#{@application.siret}_#{@public_market.fast_track_id}.zip",
                   type: 'application/zip',
                   disposition: 'attachment'
+      end
+
+      # Handle CORS preflight OPTIONS requests
+      def cors_preflight
+        head :ok
       end
 
       private
@@ -85,6 +90,19 @@ module Api
         # Find editor by the application associated with the token
         application = doorkeeper_token.application
         Editor.find_by(client_id: application.uid) if application
+      end
+
+      def doorkeeper_authorize_for_app_access!
+        # Use different scopes based on the token scopes
+        # If token has app_* scopes, it's from client_credentials flow
+        # If token has regular scopes, it's from authorization_code flow
+        if doorkeeper_token&.scopes&.include?('app_application_read')
+          # Client credentials flow (app-to-app)
+          doorkeeper_authorize! :app_application_read
+        else
+          # Authorization code flow (user-interactive)
+          doorkeeper_authorize! :application_read
+        end
       end
     end
   end

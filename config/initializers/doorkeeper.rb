@@ -113,9 +113,17 @@ Doorkeeper.configure do
   #   * `scopes` - the requested scopes (see Doorkeeper::OAuth::Scopes)
   #   * `resource_owner` - authorized resource owner instance (if present)
   #
-  # custom_access_token_expires_in do |context|
-  #   context.client.additional_settings.implicit_oauth_expiration
-  # end
+  # Custom access token expiration based on grant type
+  # Client credentials tokens last longer for automated processes
+  custom_access_token_expires_in do |context|
+    if context.grant_type == Doorkeeper::OAuth::CLIENT_CREDENTIALS
+      # App-to-app tokens last 24 hours for automated processes
+      24.hours
+    else
+      # User-interactive tokens last 1 hour (default)
+      1.hour
+    end
+  end
 
   # Use a custom class for generating the access token.
   # See https://doorkeeper.gitbook.io/guides/configuration/other-configurations#custom-access-token-generator
@@ -167,7 +175,8 @@ Doorkeeper.configure do
   # using the same credentials at the same time (e.g. web servers spanning
   # multiple machines and/or processes).
   #
-  # revoke_previous_client_credentials_token
+  # Enable this for automated app-to-app authentication to prevent token proliferation
+  revoke_previous_client_credentials_token
 
   # Only allow one valid access token obtained via authorization code
   # per client. If a new access token is obtained before the old one
@@ -245,7 +254,7 @@ Doorkeeper.configure do
   # Define access token scopes for your provider
   # For market configuration and application management
   default_scopes  :market_config
-  optional_scopes :market_read, :application_read
+  optional_scopes :market_read, :application_read, :app_market_config, :app_market_read, :app_application_read
 
   # Allows to restrict only certain scopes for grant_type.
   # By default, all the scopes will be available for all the grant types.
@@ -254,7 +263,11 @@ Doorkeeper.configure do
   # values should be the array of scopes for that grant type.
   # Note: scopes should be from configured_scopes (i.e. default or optional)
   #
-  # scopes_by_grant_type password: [:write], client_credentials: [:update]
+  # Separate scopes for different grant types:
+  # - authorization_code: User-interactive flows (legacy)
+  # - client_credentials: Automated app-to-app authentication
+  scopes_by_grant_type authorization_code: %i[market_config market_read application_read],
+                       client_credentials: %i[app_market_config app_market_read app_application_read]
 
   # Forbids creating/updating applications with arbitrary scopes that are
   # not in configuration, i.e. +default_scopes+ or +optional_scopes+.
@@ -350,9 +363,10 @@ Doorkeeper.configure do
   # custom_introspection_response CustomIntrospectionResponder
 
   # Specify what grant flows are enabled in array of Strings.
-  # For editor-to-editor authentication, we only need authorization_code flow
-  # This is the most secure flow for our use case
-  grant_flows %w[authorization_code]
+  # For editor-to-editor authentication, we support:
+  # - authorization_code: For user-interactive flows (legacy)
+  # - client_credentials: For automated app-to-app authentication
+  grant_flows %w[authorization_code client_credentials]
 
   # Allows to customize OAuth grant flows that +each+ application support.
   # You can configure a custom block (or use a class respond to `#call`) that must

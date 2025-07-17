@@ -12,7 +12,16 @@ module Buyer
 
     # Authenticate editor via Doorkeeper OAuth token (for redirect flow)
     def authenticate_editor!
-      doorkeeper_authorize!
+      # Use different scopes based on the token scopes
+      # If token has app_* scopes, it's from client_credentials flow
+      # If token has regular scopes, it's from authorization_code flow
+      if doorkeeper_token&.scopes&.include?('app_market_config')
+        # Client credentials flow (app-to-app)
+        doorkeeper_authorize! :app_market_config
+      else
+        # Authorization code flow (user-interactive)
+        doorkeeper_authorize! :market_config
+      end
     end
 
     # Get current editor from OAuth token or session

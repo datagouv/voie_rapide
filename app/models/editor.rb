@@ -9,11 +9,33 @@ class Editor < ApplicationRecord
   scope :authorized, -> { where(authorized: true) }
   scope :active, -> { where(active: true) }
   scope :authorized_and_active, -> { authorized.active }
+  scope :app_authentication_enabled, -> { where(app_authentication_enabled: true) }
+  scope :app_authentication_ready, -> { authorized_and_active.app_authentication_enabled }
 
   has_many :public_markets, dependent: :destroy
 
   def authorized_and_active?
     authorized? && active?
+  end
+
+  def app_authentication_ready?
+    authorized_and_active? && app_authentication_enabled?
+  end
+
+  def app_token_valid?
+    app_token_expires_at.present? && app_token_expires_at > Time.current
+  end
+
+  def app_token_expired?
+    !app_token_valid?
+  end
+
+  def update_app_token_usage!
+    update!(app_token_last_used_at: Time.current)
+  end
+
+  def record_app_token_expiry(expires_at)
+    update!(app_token_expires_at: expires_at)
   end
 
   # OAuth integration with Doorkeeper
@@ -43,7 +65,7 @@ class Editor < ApplicationRecord
       uid: client_id,
       secret: client_secret,
       redirect_uri: callback_url,
-      scopes: 'market_config market_read application_read'
+      scopes: 'app_market_config app_market_read app_application_read'
     )
   end
 
@@ -52,7 +74,7 @@ class Editor < ApplicationRecord
       name: name,
       secret: client_secret,
       redirect_uri: callback_url,
-      scopes: 'market_config market_read application_read'
+      scopes: 'app_market_config app_market_read app_application_read'
     )
   end
 end

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_12_123111) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_17_095654) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -86,6 +86,11 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_12_123111) do
     t.boolean "active", default: true, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "app_authentication_enabled", default: true, null: false
+    t.datetime "app_token_expires_at"
+    t.datetime "app_token_last_used_at"
+    t.index ["app_authentication_enabled"], name: "index_editors_on_app_authentication_enabled"
+    t.index ["app_token_expires_at"], name: "index_editors_on_app_token_expires_at"
     t.index ["client_id"], name: "index_editors_on_client_id", unique: true
     t.index ["name"], name: "index_editors_on_name", unique: true
   end
