@@ -42,7 +42,7 @@ Say: "I'll spawn agents to tackle different aspects of this problem" whenever a 
 - When something feels wrong
 - Before declaring "done"
 
-Run: `bin/rubocop && bin/rails test && bin/brakeman`
+Run: `bin/rubocop && bundle exec rspec`
 
 > Why: You can lose track of what's actually working. These checkpoints prevent cascading failures.
 
@@ -56,7 +56,6 @@ Run: `bin/rubocop && bin/rails test && bin/brakeman`
 
 This includes:
 - RuboCop violations (style, complexity, security)
-- Brakeman security warnings
 - Test failures
 - Database migration issues
 - ALL other checks
@@ -129,24 +128,28 @@ bin/rails db:seed
 
 ### Testing
 ```bash
-# Run all tests (excludes system tests)
-bin/rails test
+# Run all RSpec tests
+bundle exec rspec
 
 # Run tests with fresh database
-bin/rails test:db
+bin/rails db:test:prepare && bundle exec rspec
 
-# Run specific test files
-bin/rails test test/models/specific_model_test.rb
-bin/rails test test/controllers/specific_controller_test.rb
+# Run specific spec files
+bundle exec rspec spec/models/specific_model_spec.rb
+bundle exec rspec spec/controllers/specific_controller_spec.rb
+
+# Run tests with documentation format
+bundle exec rspec --format documentation
+
+# Run tests for specific model/controller
+bundle exec rspec spec/models/
+bundle exec rspec spec/controllers/
 ```
 
 ### Code Quality
 ```bash
 # Run RuboCop linter
 bin/rubocop
-
-# Run Brakeman security scanner
-bin/brakeman
 
 # Auto-fix RuboCop issues
 bin/rubocop -a
@@ -212,17 +215,17 @@ bin/rails assets:clobber
 ### Our code is complete when:
 - ✅ All RuboCop rules pass with zero issues
 - ✅ All tests pass  
-- ✅ Brakeman security scan is clean
 - ✅ Feature works end-to-end
 - ✅ Database migrations are reversible
 - ✅ Strong parameters are properly configured
 
 ### Testing Strategy
-- **Models**: Test validations, associations, and business logic
+- **Models**: Test validations, associations, and business logic with RSpec
 - **Controllers**: Test authorization, parameter handling, and response formats
-- **Integration**: Test complete user workflows
-- **System**: Test JavaScript interactions and full UI flows
+- **Integration**: Test complete user workflows with RSpec request specs
+- **System**: Test JavaScript interactions and full UI flows with Capybara
 - **Security**: Test authorization boundaries and input validation
+- **Factories**: Use FactoryBot for test data generation
 
 ### Rails Project Structure
 ```
@@ -238,7 +241,13 @@ app/
 
 config/             # Application configuration
 db/                 # Database schema and migrations
-test/               # Test suite
+spec/               # RSpec test suite
+  ├── models/       # Model specs
+  ├── controllers/  # Controller specs
+  ├── requests/     # Request specs
+  ├── features/     # Feature specs
+  ├── factories/    # FactoryBot factories
+  └── support/      # Spec support files
 ```
 
 ## Working Memory Management

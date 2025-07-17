@@ -1,0 +1,202 @@
+<% content_for :title, "Configuration des documents - Fast Track" %>
+
+<div data-controller="document-selection form-validation">
+  <!-- Step Indicator -->
+  <ol class="step-indicator">
+    <li class="completed">Type de marché</li>
+    <li class="active">Documents requis</li>
+    <li>Confirmation</li>
+  </ol>
+
+  <!-- Flash Messages -->
+  <% if flash[:alert] %>
+    <div class="alert alert-error">
+      <%= flash[:alert] %>
+    </div>
+  <% end %>
+
+  <!-- Validation Errors -->
+  <% if @market_configuration.errors.any? %>
+    <div class="alert alert-error">
+      <strong>Veuillez corriger les erreurs suivantes :</strong>
+      <ul style="margin: 0.5rem 0 0 1.5rem;">
+        <% @market_configuration.errors.full_messages.each do |message| %>
+          <li><%= message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <!-- Page Header -->
+  <div style="margin-bottom: 2rem;">
+    <h1 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem;">
+      Configuration du marché
+    </h1>
+    <p style="color: #6b7280;">
+      Type sélectionné : <strong><%= case @market_configuration.market_type
+                                       when 'supplies' then 'Fournitures'
+                                       when 'services' then 'Services'
+                                       when 'works' then 'Travaux'
+                                       end %></strong>
+    </p>
+  </div>
+
+  <!-- Market Configuration Form -->
+  <%= form_with model: @market_configuration,
+                url: buyer_market_configurations_path,
+                scope: :market_configuration,
+                local: true,
+                data: { controller: "form-validation" } do |form| %>
+    
+    <!-- Hidden field for market type -->
+    <%= form.hidden_field :market_type %>
+    
+    <!-- Basic Market Information -->
+    <fieldset style="margin-bottom: 2rem; border: none; padding: 0;">
+      <legend style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">
+        Informations générales
+      </legend>
+      
+      <div class="form-group">
+        <%= form.label :title, "Titre du marché *", class: "form-label" %>
+        <%= form.text_field :title,
+                           class: "form-input",
+                           placeholder: "Ex: Fourniture de matériel informatique",
+                           required: true,
+                           minlength: 3,
+                           maxlength: 255,
+                           data: { action: "input->form-validation#validateField" } %>
+        <div class="text-sm" style="margin-top: 0.25rem;">
+          3 à 255 caractères
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <%= form.label :description, "Description *", class: "form-label" %>
+        <%= form.text_area :description,
+                          class: "form-textarea",
+                          rows: 4,
+                          placeholder: "Décrivez les besoins et spécifications du marché...",
+                          required: true,
+                          minlength: 10,
+                          maxlength: 2000,
+                          data: { action: "input->form-validation#validateField" } %>
+        <div class="text-sm" style="margin-top: 0.25rem;">
+          10 à 2000 caractères
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <%= form.label :deadline, "Date limite de candidature *", class: "form-label" %>
+        <%= form.datetime_local_field :deadline,
+                                     class: "form-input",
+                                     required: true,
+                                     min: 1.hour.from_now.strftime("%Y-%m-%dT%H:%M"),
+                                     data: { action: "input->form-validation#validateField" } %>
+        <div class="text-sm" style="margin-top: 0.25rem;">
+          Au minimum 1 heure dans le futur
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- Mandatory Documents -->
+    <fieldset style="margin-bottom: 2rem; border: none; padding: 0;">
+      <legend style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">
+        Documents obligatoires
+        <span style="font-size: 0.875rem; font-weight: normal; color: #6b7280;">
+          (automatiquement inclus)
+        </span>
+      </legend>
+      
+      <% if @mandatory_documents.any? %>
+        <div class="document-list">
+          <% @mandatory_documents.each do |document| %>
+            <div class="document-item mandatory">
+              <input type="checkbox" checked disabled class="document-checkbox">
+              <div style="flex: 1;">
+                <div style="font-weight: 600;">
+                  <%= document.nom %>
+                </div>
+                <% if document.description.present? %>
+                  <div class="text-sm">
+                    <%= document.description %>
+                  </div>
+                <% end %>
+                <div class="text-sm" style="color: #059669;">
+                  <strong>Obligatoire</strong> pour les marchés de <%= case @market_configuration.market_type
+                                                                        when 'supplies' then 'fournitures'
+                                                                        when 'services' then 'services'
+                                                                        when 'works' then 'travaux'
+                                                                        end %>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <div style="padding: 1rem; text-align: center; color: #6b7280; border: 1px dashed #d1d5db; border-radius: 0.375rem;">
+          Aucun document spécifiquement obligatoire pour ce type de marché.
+        </div>
+      <% end %>
+    </fieldset>
+
+    <!-- Optional Documents -->
+    <fieldset style="margin-bottom: 2rem; border: none; padding: 0;">
+      <legend style="font-size: 1.125rem; font-weight: 600; margin-bottom: 1rem;">
+        Documents optionnels
+        <span style="font-size: 0.875rem; font-weight: normal; color: #6b7280;">
+          (sélectionnez selon vos besoins)
+        </span>
+      </legend>
+      
+      <% if @optional_documents.any? %>
+        <div class="document-list">
+          <% @optional_documents.each do |document| %>
+            <div class="document-item">
+              <%= form.check_box :optional_document_ids,
+                                { multiple: true, 
+                                  checked: @market_configuration.optional_document_ids.include?(document.id.to_s),
+                                  class: "document-checkbox",
+                                  data: { action: "change->document-selection#updateCount" } },
+                                document.id,
+                                "" %>
+              <div style="flex: 1;">
+                <div style="font-weight: 600;">
+                  <%= document.nom %>
+                </div>
+                <% if document.description.present? %>
+                  <div class="text-sm">
+                    <%= document.description %>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+        
+        <div style="margin-top: 1rem; padding: 0.75rem; background-color: #f9fafb; border-radius: 0.375rem;">
+          <span data-document-selection-target="count" style="font-weight: 600;">0</span>
+          document(s) optionnel(s) sélectionné(s)
+        </div>
+      <% else %>
+        <div style="padding: 1rem; text-align: center; color: #6b7280; border: 1px dashed #d1d5db; border-radius: 0.375rem;">
+          Aucun document optionnel disponible pour ce type de marché.
+        </div>
+      <% end %>
+    </fieldset>
+
+    <!-- Form Actions -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem;">
+      <%= link_to "← Retour", 
+                  new_buyer_market_configuration_path,
+                  class: "btn btn-secondary",
+                  style: "text-decoration: none;" %>
+      
+      <%= form.submit "Créer le marché", 
+                      class: "btn btn-primary",
+                      style: "min-width: 150px;",
+                      data: { disable_with: "Création en cours..." } %>
+    </div>
+  <% end %>
+</div>
+

@@ -1,0 +1,374 @@
+<% content_for :title, "Fast Track - Administration" %>
+
+<div class="welcome-header">
+  <h1>🚀 Fast Track - Interface d'Administration</h1>
+  <p class="subtitle">Plateforme de candidature simplifiée pour les marchés publics</p>
+</div>
+
+<div class="dev-dashboard">
+  <!-- System Status -->
+  <div class="status-section">
+    <h2>État du Système</h2>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-number"><%= @editors_count %></div>
+        <div class="stat-label">Éditeurs configurés</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-number"><%= @markets_count %></div>
+        <div class="stat-label">Marchés créés</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-number"><%= @applications_count %></div>
+        <div class="stat-label">Candidatures</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-number"><%= @documents_count %></div>
+        <div class="stat-label">Documents disponibles</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Authentication Status -->
+  <% if editor_authenticated? %>
+    <div class="auth-section">
+      <div style="background-color: #d1fae5; border: 1px solid #a7f3d0; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+        <h3 style="margin: 0 0 0.5rem 0; color: #065f46;">✅ Authentifié en tant qu'éditeur</h3>
+        <p style="margin: 0; color: #059669;">
+          <strong><%= current_editor.name %></strong> (Client ID: <code><%= current_editor.client_id %></code>)
+        </p>
+        <div style="margin-top: 1rem;">
+          <%= link_to "Se déconnecter", editor_logout_path, method: :delete, class: "btn btn-outline-secondary" %>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <div class="auth-section">
+      <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+        <h3 style="margin: 0 0 0.5rem 0; color: #991b1b;">🔐 Authentification requise</h3>
+        <p style="margin: 0 0 1rem 0; color: #7f1d1d;">
+          Vous devez vous authentifier en tant qu'éditeur pour accéder aux fonctionnalités OAuth.
+        </p>
+        <%= link_to "S'authentifier", editor_auth_path, class: "btn btn-primary" %>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Quick Actions -->
+  <div class="actions-section">
+    <h2>Actions Rapides</h2>
+    <div class="actions-grid">
+      <div class="action-card">
+        <h3>👥 Gestion des Éditeurs</h3>
+        <p>Créer et configurer des éditeurs avec OAuth2 pour tester l'intégration Fast Track.</p>
+        <%= link_to "Gérer les éditeurs", admin_editors_path, class: "btn btn-primary" %>
+      </div>
+      
+      <div class="action-card">
+        <h3>🔐 OAuth Applications</h3>
+        <p>Consulter les applications OAuth configurées via Doorkeeper.</p>
+        <%= link_to "Applications OAuth", oauth_applications_path, class: "btn btn-outline-secondary" %>
+      </div>
+    </div>
+  </div>
+
+  <!-- API Information -->
+  <div class="api-section">
+    <h2>Documentation API</h2>
+    <div class="api-info">
+      <h3>Endpoints disponibles</h3>
+      <div class="endpoint-list">
+        <div class="endpoint-item">
+          <code class="method get">GET</code>
+          <code class="url">/oauth/authorize</code>
+          <span class="description">Autorisation OAuth2</span>
+        </div>
+        
+        <div class="endpoint-item">
+          <code class="method post">POST</code>
+          <code class="url">/oauth/token</code>
+          <span class="description">Échange de token</span>
+        </div>
+        
+        <div class="endpoint-item">
+          <code class="method get">GET</code>
+          <code class="url">/buyer/market_configurations/new</code>
+          <span class="description">Configuration de marché (OAuth requis)</span>
+        </div>
+      </div>
+      
+      <div class="integration-example">
+        <h4>Exemple d'intégration basique</h4>
+        <div class="code-block">
+<pre><code>// 1. Créer un éditeur via l'admin
+// 2. Récupérer client_id et client_secret  
+// 3. Redirection OAuth
+window.location.href = '/oauth/authorize?' + new URLSearchParams({
+  client_id: 'YOUR_CLIENT_ID',
+  redirect_uri: 'YOUR_REDIRECT_URI', 
+  response_type: 'code',
+  scope: 'market_config'
+});
+
+// 4. Après autorisation, échanger le code contre un token
+// 5. Utiliser le token pour accéder à Fast Track</code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Environment Info -->
+  <div class="env-section">
+    <h2>Informations d'Environnement</h2>
+    <div class="env-info">
+      <div class="env-item">
+        <strong>Rails:</strong> <%= Rails.version %>
+      </div>
+      <div class="env-item">
+        <strong>Ruby:</strong> <%= RUBY_VERSION %>
+      </div>
+      <div class="env-item">
+        <strong>Environment:</strong> <%= Rails.env %>
+      </div>
+      <div class="env-item">
+        <strong>Database:</strong> PostgreSQL
+      </div>
+      <div class="env-item">
+        <strong>OAuth Provider:</strong> Doorkeeper <%= Doorkeeper::VERSION %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .welcome-header {
+    text-align: center;
+    margin-bottom: 3rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 1rem;
+  }
+
+  .welcome-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0 0 1rem 0;
+  }
+
+  .subtitle {
+    font-size: 1.25rem;
+    margin: 0;
+    opacity: 0.9;
+  }
+
+  .dev-dashboard {
+    display: grid;
+    gap: 2rem;
+  }
+
+  .status-section,
+  .actions-section,
+  .api-section,
+  .env-section {
+    background: white;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+    padding: 1.5rem;
+  }
+
+  .status-section h2,
+  .actions-section h2,
+  .api-section h2,
+  .env-section h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 1.5rem 0;
+    color: #111827;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .stat-card {
+    text-align: center;
+    padding: 1.5rem;
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+    border: 1px solid #e5e7eb;
+  }
+
+  .stat-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2563eb;
+    margin-bottom: 0.5rem;
+  }
+
+  .stat-label {
+    color: #6b7280;
+    font-weight: 500;
+  }
+
+  .actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .action-card {
+    padding: 1.5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    background-color: #fafafa;
+  }
+
+  .action-card h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem 0;
+    color: #111827;
+  }
+
+  .action-card p {
+    color: #6b7280;
+    margin: 0 0 1rem 0;
+    line-height: 1.5;
+  }
+
+  .endpoint-list {
+    display: grid;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+
+  .endpoint-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    background-color: #f9fafb;
+    border-radius: 0.375rem;
+    border: 1px solid #e5e7eb;
+  }
+
+  .method {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: 600;
+    font-size: 0.75rem;
+    min-width: 50px;
+    text-align: center;
+  }
+
+  .method.get {
+    background-color: #dcfce7;
+    color: #166534;
+  }
+
+  .method.post {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+
+  .url {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    background-color: #e5e7eb;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    flex: 1;
+  }
+
+  .description {
+    color: #6b7280;
+    font-size: 0.875rem;
+  }
+
+  .integration-example h4 {
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #374151;
+  }
+
+  .code-block {
+    background-color: #1f2937;
+    color: #f9fafb;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+  }
+
+  .code-block pre {
+    margin: 0;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .env-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+  }
+
+  .env-item {
+    padding: 0.75rem;
+    background-color: #f9fafb;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+  }
+
+  .env-item strong {
+    color: #374151;
+  }
+
+  .btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    font-weight: 500;
+    text-align: center;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background-color: #2563eb;
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background-color: #1d4ed8;
+  }
+
+  .btn-outline-primary {
+    border-color: #2563eb;
+    color: #2563eb;
+    background: white;
+  }
+
+  .btn-outline-primary:hover {
+    background-color: #2563eb;
+    color: white;
+  }
+
+  .btn-outline-secondary {
+    border-color: #6b7280;
+    color: #6b7280;
+    background: white;
+  }
+
+  .btn-outline-secondary:hover {
+    background-color: #6b7280;
+    color: white;
+  }
+</style>

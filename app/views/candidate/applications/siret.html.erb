@@ -1,0 +1,162 @@
+<% content_for :title, "Identification SIRET - #{@public_market.title}" %>
+
+<!-- Step Indicator -->
+<ol class="step-indicator">
+  <li class="completed">Information du marché</li>
+  <li class="active">Identification</li>
+  <li>Formulaire</li>
+  <li>Confirmation</li>
+</ol>
+
+<div class="candidate-card">
+  <div class="candidate-card-header">
+    <h2 style="margin: 0; font-size: 1.5rem; color: #1f2937;">
+      Identification de votre entreprise
+    </h2>
+  </div>
+  
+  <div class="candidate-card-body">
+    <!-- Instructions -->
+    <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+      <h3 style="margin: 0 0 1rem 0; color: #1e40af; font-size: 1.125rem;">
+        🏢 Saisissez votre numéro SIRET
+      </h3>
+      <p style="margin: 0; color: #1e3a8a; line-height: 1.6;">
+        Le SIRET (Système d'Identification du Répertoire des Établissements) est composé de 14 chiffres.
+        Il identifie de manière unique votre établissement auprès de l'administration française.
+      </p>
+    </div>
+
+    <!-- SIRET Form -->
+    <%= form_with url: candidate_validate_siret_path(fast_track_id: @public_market.fast_track_id), 
+        method: :post, local: true, html: { id: 'siret-form' } do |form| %>
+      
+      <div class="form-group">
+        <%= form.label :siret, "Numéro SIRET *", class: "form-label" %>
+        <%= form.text_field :siret, 
+            class: "form-control", 
+            placeholder: "12345678901234",
+            maxlength: 14,
+            pattern: "\\d{14}",
+            required: true,
+            autocomplete: "off",
+            style: "font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 1.125rem; letter-spacing: 0.1em;" %>
+        
+        <div class="text-sm text-muted" style="margin-top: 0.5rem;">
+          Saisissez les 14 chiffres de votre SIRET sans espaces ni tirets
+        </div>
+        
+        <% if flash[:error] %>
+          <div class="form-error">
+            <%= flash[:error] %>
+          </div>
+        <% end %>
+      </div>
+
+      <!-- SIRET Help -->
+      <div style="background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 2rem;">
+        <h4 style="margin: 0 0 1rem 0; color: #374151; font-size: 1rem;">
+          💡 Où trouver votre SIRET ?
+        </h4>
+        <ul style="margin: 0; padding-left: 1.5rem; color: #4b5563;">
+          <li>Sur vos factures et documents commerciaux</li>
+          <li>Dans vos déclarations fiscales et sociales</li>
+          <li>Sur le site de l'INSEE (entreprise.insee.fr)</li>
+          <li>Dans votre espace entreprise sur service-public.fr</li>
+        </ul>
+        
+        <div style="margin-top: 1rem; padding: 1rem; background-color: #fffbeb; border-radius: 0.375rem;">
+          <p style="margin: 0; font-size: 0.875rem; color: #92400e;">
+            <strong>Exemple :</strong> Si votre SIREN est 123456789 et votre NIC est 01234, 
+            votre SIRET est <code style="background-color: #fed7aa; padding: 0.125rem 0.25rem; border-radius: 0.25rem;">12345678901234</code>
+          </p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; gap: 1rem; justify-content: space-between; align-items: center;">
+        <%= link_to candidate_entry_path(fast_track_id: @public_market.fast_track_id), 
+            class: "btn btn-secondary" do %>
+          ← Retour
+        <% end %>
+        
+        <%= form.submit "Valider mon SIRET", 
+            class: "btn btn-primary", 
+            id: "submit-siret",
+            disabled: true %>
+      </div>
+    <% end %>
+
+    <!-- Market Info Reminder -->
+    <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb; text-align: center;">
+      <p class="text-sm text-muted">
+        Marché : <%= @public_market.title %><br>
+        Date limite : <%= @public_market.deadline.strftime("%d/%m/%Y à %H:%M") %>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script type="application/javascript">
+  document.addEventListener('turbo:load', function() {
+    const siretInput = document.getElementById('siret');
+    const submitButton = document.getElementById('submit-siret');
+    
+    // Exit early if elements don't exist (we're on a different page)
+    if (!siretInput || !submitButton) return;
+    
+    function validateSiret(siret) {
+      // Remove any spaces or special characters
+      const cleanSiret = siret.replace(/\s/g, '');
+      
+      // Check if it's exactly 14 digits
+      return /^\d{14}$/.test(cleanSiret);
+    }
+    
+    function updateSubmitButton() {
+      const isValid = validateSiret(siretInput.value);
+      submitButton.disabled = !isValid;
+      
+      if (isValid) {
+        submitButton.classList.remove('btn-disabled');
+        submitButton.style.opacity = '1';
+      } else {
+        submitButton.classList.add('btn-disabled');
+        submitButton.style.opacity = '0.6';
+      }
+    }
+    
+    // Real-time validation
+    siretInput.addEventListener('input', function(e) {
+      // Allow only digits
+      let value = e.target.value.replace(/\D/g, '');
+      
+      // Limit to 14 characters
+      if (value.length > 14) {
+        value = value.substring(0, 14);
+      }
+      
+      e.target.value = value;
+      updateSubmitButton();
+    });
+    
+    // Initial check
+    updateSubmitButton();
+    
+    // Focus on input
+    siretInput.focus();
+    
+    // Form submission
+    document.getElementById('siret-form').addEventListener('submit', function(e) {
+      if (!validateSiret(siretInput.value)) {
+        e.preventDefault();
+        alert('Veuillez saisir un SIRET valide de 14 chiffres.');
+        return false;
+      }
+      
+      // Show loading state
+      submitButton.disabled = true;
+      submitButton.textContent = 'Validation en cours...';
+    });
+  });
+</script>

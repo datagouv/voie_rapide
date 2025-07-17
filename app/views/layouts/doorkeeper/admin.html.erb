@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title><%= content_for?(:title) ? yield(:title) : "OAuth Applications - Fast Track" %></title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <%= csrf_meta_tags %>
+  <%= csp_meta_tag %>
+  
+  <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+  <%= javascript_importmap_tags %>
+</head>
+
+<body>
+  <div class="admin-header">
+    <nav class="navbar">
+      <div class="navbar-content">
+        <h1>🚀 Fast Track - OAuth Applications</h1>
+        <div class="nav-links">
+          <%= link_to "Applications", oauth_applications_path, class: "nav-link #{'active' if request.path == oauth_applications_path}" %>
+          <%= link_to "Accueil", root_path, class: "nav-link" %>
+          <% if editor_authenticated? %>
+            <%= link_to "Déconnexion", editor_logout_path, method: :delete, class: "nav-link" %>
+          <% end %>
+        </div>
+      </div>
+    </nav>
+  </div>
+
+  <main class="admin-container">
+    <% if flash[:notice].present? %>
+      <div class="alert alert-info">
+        <%= flash[:notice] %>
+      </div>
+    <% end %>
+    
+    <% if flash[:alert].present? %>
+      <div class="alert alert-danger">
+        <%= flash[:alert] %>
+      </div>
+    <% end %>
+
+    <%= yield %>
+  </main>
+</body>
+</html>
