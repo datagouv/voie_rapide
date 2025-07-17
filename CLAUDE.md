@@ -42,7 +42,7 @@ Say: "I'll spawn agents to tackle different aspects of this problem" whenever a 
 - When something feels wrong
 - Before declaring "done"
 
-Run: `bin/rubocop && bundle exec rspec`
+Run: `bin/rubocop && bundle exec rspec && bundle exec cucumber`
 
 > Why: You can lose track of what's actually working. These checkpoints prevent cascading failures.
 
@@ -146,6 +146,9 @@ bin/rubocop
 
 # Run RSpec tests
 bundle exec rspec
+
+# Run Cucumber tests
+bundle exec cucumber
 
 # Auto-fix RuboCop issues
 bin/rubocop -a

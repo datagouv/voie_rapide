@@ -42,9 +42,17 @@ jobs:
         bundle exec rails db:create
         bundle exec rails db:schema:load
     
-    - name: Run tests
+    - name: Run RSpec tests
       env:
         RAILS_ENV: test
         DATABASE_URL: postgres://voie_rapide:wow*veryrapide@localhost:5432/voie_rapide_test
       run: |
         bundle exec rspec
+
+    - name: Run Cucumber tests
+      env:
+        RAILS_ENV: test
+        DATABASE_URL: postgres://voie_rapide:wow*veryrapide@localhost:5432/voie_rapide_test
+        CUCUMBER_PUBLISH_QUIET: true
+      run: |
+        bundle exec cucumber

@@ -66,4 +66,8 @@ group :test do
 
   # Enhanced test matchers
   gem 'shoulda-matchers', '~> 6.4'
+
+  # Behavior-driven development
+  gem 'cucumber-rails', '~> 3.1', require: false
+  gem 'database_cleaner-active_record', '~> 2.2'
 end
