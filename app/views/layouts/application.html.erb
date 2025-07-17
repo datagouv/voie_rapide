@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr" data-fr-scheme="system">
   <head>
+    <meta charset="utf-8">
     <title><%= content_for(:title) || "Voie Rapide" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -9,6 +10,10 @@
     <%= csp_meta_tag %>
 
     <%= yield :head %>
+
+    <%# DSFR CSS %>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@latest/dist/dsfr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@latest/dist/utility/utility.min.css">
 
     <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
     <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
@@ -23,6 +28,71 @@
   </head>
 
   <body>
-    <%= yield %>
+    <header role="banner" class="fr-header">
+      <div class="fr-header__body">
+        <div class="fr-container">
+          <div class="fr-header__body-row">
+            <div class="fr-header__brand fr-enlarge-link">
+              <div class="fr-header__brand-top">
+                <div class="fr-header__logo">
+                  <%= link_to root_path, title: "Accueil - Voie Rapide" do %>
+                    <p class="fr-logo">
+                      République<br>Française
+                    </p>
+                  <% end %>
+                </div>
+                <div class="fr-header__navbar">
+                  <p class="fr-header__service-title">
+                    <%= link_to "Voie Rapide", root_path, title: "Voie Rapide - Accueil" %>
+                  </p>
+                  <p class="fr-header__service-tagline">Simplifiez vos candidatures aux marchés publics</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main role="main" id="content">
+      <div class="fr-container fr-py-4w">
+        <%= yield %>
+      </div>
+    </main>
+
+    <footer class="fr-footer" role="contentinfo">
+      <div class="fr-container">
+        <div class="fr-footer__body">
+          <div class="fr-footer__brand fr-enlarge-link">
+            <p class="fr-logo">
+              République<br>Française
+            </p>
+          </div>
+          <div class="fr-footer__content">
+            <p class="fr-footer__content-desc">
+              Voie Rapide facilite l'accès des PME aux marchés publics français.
+            </p>
+            <ul class="fr-footer__content-list">
+              <li class="fr-footer__content-item">
+                <a class="fr-footer__content-link" href="#">Accessibilité : non conforme</a>
+              </li>
+              <li class="fr-footer__content-item">
+                <a class="fr-footer__content-link" href="#">Mentions légales</a>
+              </li>
+              <li class="fr-footer__content-item">
+                <a class="fr-footer__content-link" href="#">Données personnelles</a>
+              </li>
+              <li class="fr-footer__content-item">
+                <a class="fr-footer__content-link" href="#">Gestion des cookies</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <%# DSFR JavaScript %>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@latest/dist/dsfr/dsfr.module.min.js"></script>
+    <script type="text/javascript" nomodule src="https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@latest/dist/dsfr/dsfr.nomodule.min.js"></script>
   </body>
 </html>

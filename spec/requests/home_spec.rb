@@ -15,5 +15,20 @@ RSpec.describe 'Home', type: :request do
       expect(response.body).to include('Fast Track test page is working!')
       expect(response.body).to include('foundation for our Fast Track procurement application')
     end
+
+    it 'includes DSFR header and footer' do
+      get '/'
+      expect(response.body).to include('fr-header')
+      expect(response.body).to include('fr-footer')
+      expect(response.body).to include('République')
+      expect(response.body).to include('Simplifiez vos candidatures aux marchés publics')
+    end
+
+    it 'includes DSFR CSS and JavaScript' do
+      get '/'
+      expect(response.body).to include('https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@latest/dist/dsfr.min.css')
+      expect(response.body).to include('dsfr.module.min.js')
+      expect(response.body).to include('data-fr-scheme="system"')
+    end
   end
 end
