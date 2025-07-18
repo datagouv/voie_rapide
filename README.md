@@ -2,7 +2,7 @@
 
 [![Ruby](https://img.shields.io/badge/Ruby-3.2.1-red.svg)](https://www.ruby-lang.org/)
 [![Rails](https://img.shields.io/badge/Rails-8.0.2-red.svg)](https://rubyonrails.org/)
-[![DSFR](https://img.shields.io/badge/DSFR-Latest-blue.svg)](https://www.systeme-de-design.gouv.fr/)
+[![DSFR](https://img.shields.io/badge/DSFR-1.13.0-blue.svg)](https://www.systeme-de-design.gouv.fr/)
 
 **Voie Rapide** est une application Rails 8 qui simplifie les candidatures aux marchés publics pour les petites et moyennes entreprises (PME). Le projet vise à transformer les procédures d'appel d'offres complexes en un processus rationalisé et convivial, intégré aux plateformes d'achat existantes.
 
@@ -52,7 +52,7 @@ Faciliter l'accès des PME aux marchés publics français en :
 - **Solid Cable/Cache/Queue** - Infrastructure Rails database-backed
 
 ### Frontend
-- **DSFR (Système de Design de l'État)** - Framework CSS gouvernemental
+- **DSFR (Système de Design de l'État) v1.13.0** - Framework CSS gouvernemental
 - **Turbo & Stimulus (Hotwire)** - Interactivité frontend
 - **Importmap** - Gestion des modules JavaScript
 - **Propshaft** - Pipeline d'assets moderne

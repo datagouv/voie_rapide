@@ -24,11 +24,20 @@ RSpec.describe 'Home', type: :request do
       expect(response.body).to include('Simplifiez vos candidatures aux marchés publics')
     end
 
-    it 'includes DSFR CSS and JavaScript' do
+    it 'includes DSFR framework' do
       get '/'
-      expect(response.body).to include('https://cdn.jsdelivr.net/npm/@gouvfr/dsfr@latest/dist/dsfr.min.css')
-      expect(response.body).to include('dsfr.module.min.js')
+      # Check for DSFR CSS classes in the rendered HTML
+      expect(response.body).to include('fr-container')
+      expect(response.body).to include('fr-grid-row')
+      expect(response.body).to include('fr-callout')
+      expect(response.body).to include('fr-badge')
+
+      # Check for DSFR theme system
       expect(response.body).to include('data-fr-scheme="system"')
+
+      # Check that DSFR CSS and JS are loaded (without checking exact URLs)
+      expect(response.body).to match(/<link[^>]+dsfr[^>]+\.css/)
+      expect(response.body).to match(/<script[^>]+dsfr[^>]+\.js/)
     end
   end
 end
