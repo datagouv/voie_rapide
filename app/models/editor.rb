@@ -15,7 +15,7 @@ class Editor < ApplicationRecord
 
   # OAuth integration with Doorkeeper
   def doorkeeper_application
-    @doorkeeper_application ||= Doorkeeper::Application.find_by(uid: client_id)
+    @doorkeeper_application ||= CustomDoorkeeperApplication.find_by(uid: client_id)
   end
 
   def ensure_doorkeeper_application!
@@ -35,7 +35,7 @@ class Editor < ApplicationRecord
   private
 
   def create_doorkeeper_application!
-    Doorkeeper::Application.create!(
+    CustomDoorkeeperApplication.create!(
       name: name,
       uid: client_id,
       secret: client_secret,

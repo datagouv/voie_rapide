@@ -36,7 +36,8 @@ Doorkeeper.configure do
   #
   # access_token_class "Doorkeeper::AccessToken"
   # access_grant_class "Doorkeeper::AccessGrant"
-  # application_class "Doorkeeper::Application"
+  # Use custom application class to validate Editor authorization status
+  application_class 'CustomDoorkeeperApplication'
   #
   # Don't forget to include Doorkeeper ORM mixins into your custom models:
   #
@@ -437,9 +438,15 @@ Doorkeeper.configure do
   # Hook into the strategies' request & response life-cycle in case your
   # application needs advanced customization or logging:
   #
-  # before_successful_strategy_response do |request|
-  #   puts "BEFORE HOOK FIRED! #{request}"
-  # end
+  before_successful_strategy_response do |request|
+    # For client credentials flow, validate Editor status
+    if request.parameters[:grant_type] == 'client_credentials'
+      client_id = request.parameters[:client_id]
+      editor = Editor.find_by(client_id: client_id)
+
+      raise Doorkeeper::Errors::InvalidClient, nil unless editor&.authorized_and_active?
+    end
+  end
   #
   # after_successful_strategy_response do |request, response|
   #   puts "AFTER HOOK FIRED! #{request}, #{response}"
