@@ -40,7 +40,7 @@ class Editor < ApplicationRecord
       uid: client_id,
       secret: client_secret,
       redirect_uri: '',
-      scopes: 'api_access'
+      scopes: 'api_access api_read api_write'
     )
   end
 
@@ -48,7 +48,7 @@ class Editor < ApplicationRecord
     doorkeeper_application.update!(
       name: name,
       secret: client_secret,
-      scopes: 'api_access'
+      scopes: 'api_access api_read api_write'
     )
   end
 end
